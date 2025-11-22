@@ -24,7 +24,7 @@ Simple browser-persistent todo list built with React and Vite. Todos are stored 
 
 ## Supabase backend
 
-Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in your environment (or `.env`). GitHub Pages builds pick these up from `.env.production` in this repo. See `docs/supabase.md` for the SQL schema, RLS policies, and realtime settings this app expects.
+Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in your environment (or `.env`). GitHub Pages builds pick these up from `.env.production` in this repo. Add `VITE_SITE_URL` to match your deployed domain so Supabase email links come back to the live site. See `docs/supabase.md` for the SQL schema, RLS policies, and realtime settings this app expects.
 
 ## Project Structure
 
