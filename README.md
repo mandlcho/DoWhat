@@ -22,11 +22,16 @@ Simple browser-persistent todo list built with React and Vite. Todos are stored 
 - `npm run lint` – run ESLint on the source files.
 - `npm run test` – execute Vitest unit tests.
 
+## Supabase backend
+
+Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in your environment (or `.env`) to enable authentication and syncing against Supabase. See `docs/supabase.md` for the SQL schema, RLS policies, and realtime settings this app expects.
+
 ## Project Structure
 
 ```
 ├── docs/
-│   └── roadmap.md
+│   ├── roadmap.md
+│   └── supabase.md
 ├── src/
 │   ├── App.jsx
 │   ├── App.css

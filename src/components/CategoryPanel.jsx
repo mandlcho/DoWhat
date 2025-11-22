@@ -17,13 +17,13 @@ function CategoryPanel({
     onToggleCategory(categoryId);
   };
 
-  const handleSubmitNew = (event) => {
+  const handleSubmitNew = async (event) => {
     event.preventDefault();
     if (!newLabel.trim()) {
       setError("enter a name to add a category.");
       return;
     }
-    const created = onCreateCategory(newLabel);
+    const created = await onCreateCategory(newLabel);
     if (!created) {
       setError("category already exists.");
       return;

@@ -3,11 +3,32 @@ import { supabase } from "../supabaseClient";
 import { useSession } from "./useSession";
 
 const DEFAULT_CATEGORIES = [
-  { name: "work", color: "#2563eb" },
-  { name: "personal", color: "#059669" },
-  { name: "errands", color: "#d97706" },
-  { name: "learning", color: "#9333ea" },
+  { label: "work", color: "#2563eb" },
+  { label: "personal", color: "#059669" },
+  { label: "errands", color: "#d97706" },
+  { label: "learning", color: "#9333ea" }
 ];
+
+const mapCategoryFromDatabase = (row) => {
+  if (!row) return null;
+  return {
+    id: row.id,
+    label: row.label ?? row.name ?? "",
+    color: row.color ?? "#2563eb"
+  };
+};
+
+const mapCategoryToDatabase = (category, userId) => {
+  if (!category?.label || !userId) {
+    return null;
+  }
+
+  return {
+    name: category.label.trim().toLowerCase(),
+    color: category.color ?? "#2563eb",
+    user_id: userId
+  };
+};
 
 export function useCategories() {
   const { session } = useSession();
@@ -17,7 +38,11 @@ export function useCategories() {
   const user = session?.user;
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setCategories([]);
+      setLoading(false);
+      return undefined;
+    }
 
     const fetchCategories = async () => {
       setLoading(true);
@@ -28,43 +53,69 @@ export function useCategories() {
 
       if (error) {
         console.error("Error fetching categories:", error);
-      } else if (data.length === 0) {
-        const { data: newCategories, error: insertError } = await supabase
-          .from("categories")
-          .insert(DEFAULT_CATEGORIES.map(c => ({ ...c, user_id: user.id })))
-          .select();
-        
+        setLoading(false);
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        const inserts = DEFAULT_CATEGORIES.map((category) =>
+          mapCategoryToDatabase(category, user.id)
+        ).filter(Boolean);
+
+        const {
+          data: newCategories,
+          error: insertError
+        } = await supabase.from("categories").insert(inserts).select();
+
         if (insertError) {
           console.error("Error creating default categories:", insertError);
-        } else {
-          setCategories(newCategories);
+          setLoading(false);
+          return;
         }
-      } else {
-        setCategories(data);
+
+        setCategories(
+          newCategories.map(mapCategoryFromDatabase).filter(Boolean)
+        );
+        setLoading(false);
+        return;
       }
+
+      setCategories(data.map(mapCategoryFromDatabase).filter(Boolean));
       setLoading(false);
     };
 
     fetchCategories();
 
-    const subscription = supabase.channel('public:categories')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, payload => {
-        if (payload.eventType === 'INSERT') {
-          setCategories(currentCategories => [...currentCategories, payload.new]);
+    const subscription = supabase
+      .channel("public:categories")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "categories" },
+        (payload) => {
+          if (payload.eventType === "DELETE") {
+            setCategories((currentCategories) =>
+              currentCategories.filter(
+                (category) => category.id !== payload.old.id
+              )
+            );
+            return;
+          }
+
+          const mapped = mapCategoryFromDatabase(payload.new);
+          if (!mapped) {
+            return;
+          }
+
+          setCategories((currentCategories) => {
+            const filtered = currentCategories.filter(
+              (category) => category.id !== mapped.id
+            );
+            return [...filtered, mapped].sort((a, b) =>
+              a.label.localeCompare(b.label)
+            );
+          });
         }
-        if (payload.eventType === 'UPDATE') {
-          setCategories(currentCategories =>
-            currentCategories.map(category =>
-              category.id === payload.new.id ? payload.new : category
-            )
-          );
-        }
-        if (payload.eventType === 'DELETE') {
-          setCategories(currentCategories =>
-            currentCategories.filter(category => category.id !== payload.old.id)
-          );
-        }
-      })
+      )
       .subscribe();
 
     return () => {
@@ -75,19 +126,35 @@ export function useCategories() {
   const addCategory = async (label) => {
     if (!user || !label) return null;
 
-    const existing = categories.find(c => c.name === label.trim().toLowerCase());
+    const normalized = label.trim();
+    const normalizedKey = normalized.toLowerCase();
+    const existing = categories.find(
+      (category) => category.label.toLowerCase() === normalizedKey
+    );
     if (existing) return existing;
+
+    const dbCategory = mapCategoryToDatabase(
+      { label: normalized, color: "#6b7280" },
+      user.id
+    );
 
     const { data, error } = await supabase
       .from("categories")
-      .insert([{ name: label.trim().toLowerCase(), user_id: user.id }])
+      .insert([dbCategory])
       .select();
 
     if (error) {
       console.error("Error adding category:", error);
       return null;
     }
-    return data[0];
+
+    const created = mapCategoryFromDatabase(data?.[0]);
+    if (created) {
+      setCategories((current) =>
+        [...current, created].sort((a, b) => a.label.localeCompare(b.label))
+      );
+    }
+    return created;
   };
 
   const removeCategory = async (categoryId) => {
@@ -100,6 +167,10 @@ export function useCategories() {
 
     if (error) {
       console.error("Error deleting category:", error);
+    } else {
+      setCategories((current) =>
+        current.filter((category) => category.id !== categoryId)
+      );
     }
   };
 
@@ -110,5 +181,3 @@ export function useCategories() {
     loading,
   };
 }
-
-
