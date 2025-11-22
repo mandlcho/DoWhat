@@ -37,30 +37,15 @@ export default function Auth() {
   };
 
   return (
-    <div className="auth-shell">
-      <div className="auth-hero">
-        <p className="auth-kicker">kanban, everywhere</p>
-        <h1>Sign in to keep your board in sync.</h1>
-        <p className="auth-subtext">
-          Stay on top of backlog, in-progress, and done with realtime updates across
-          your devices. Log in or create an account to continue.
-        </p>
-        <div className="auth-bullets" role="list">
-          <div role="listitem">email + password, powered by supabase auth</div>
-          <div role="listitem">real-time task updates and labels</div>
-          <div role="listitem">works on mobile, tablet, and desktop</div>
-        </div>
-        <p className="auth-footnote">No tracking, just your tasks — securely stored.</p>
-      </div>
-
-      <div className="auth-card" aria-live="polite">
+    <div className="auth-shell minimal">
+      <div className="auth-card minimal" aria-live="polite">
         <header className="auth-card-header">
           <p>welcome</p>
-          <h2>Sign in to kanban</h2>
+          <h2>sign in to kanban</h2>
         </header>
         <form className="auth-form">
           <label htmlFor="email" className="auth-label">
-            Email
+            email
           </label>
           <input
             id="email"
@@ -74,7 +59,7 @@ export default function Auth() {
           />
 
           <label htmlFor="password" className="auth-label">
-            Password
+            password
           </label>
           <div className="auth-password-row">
             <input
@@ -106,7 +91,7 @@ export default function Auth() {
               disabled={loading}
               onClick={(event) => handleSubmit(event, "login")}
             >
-              {loading ? "Working…" : "Log in"}
+              {loading ? "working…" : "log in"}
             </button>
             <button
               type="button"
@@ -114,7 +99,7 @@ export default function Auth() {
               disabled={loading}
               onClick={(event) => handleSubmit(event, "signup")}
             >
-              Create account
+              create account
             </button>
           </div>
         </form>
