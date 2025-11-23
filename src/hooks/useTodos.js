@@ -68,6 +68,13 @@ const mapTodoToDatabase = (todo) => {
     return acc;
   }, {});
 };
+const prepareDbPayload = (todo, { includeCategories = true } = {}) => {
+  const mapped = mapTodoToDatabase(todo);
+  if (!includeCategories) {
+    delete mapped.categories;
+  }
+  return mapped;
+};
 
 const splitTodosByArchive = (items) => {
   const active = [];
@@ -91,6 +98,7 @@ export function useTodos() {
   const [loading, setLoading] = useState(true);
   const [syncStateById, setSyncStateById] = useState(new Map());
   const [syncErrorById, setSyncErrorById] = useState(new Map());
+  const [supportsCategories, setSupportsCategories] = useState(true);
   const user = session?.user;
 
   const refreshTodos = useCallback(async () => {
@@ -319,10 +327,25 @@ export function useTodos() {
     });
 
     if (isTempId(todo.id)) {
-      const { data, error } = await supabase
-        .from("todos")
-        .insert([{ ...mapTodoToDatabase(todo), user_id: user.id }])
-        .select();
+      const attemptInsert = async (allowCategories) => {
+        const payload = {
+          ...prepareDbPayload(todo, { includeCategories: allowCategories }),
+          user_id: user.id
+        };
+        return supabase.from("todos").insert([payload]).select();
+      };
+
+      let data;
+      let error;
+      ({ data, error } = await attemptInsert(supportsCategories));
+
+      if (error && supportsCategories) {
+        const msg = (error.message || "").toLowerCase();
+        if (msg.includes("categories") && msg.includes("column")) {
+          setSupportsCategories(false);
+          ({ data, error } = await attemptInsert(false));
+        }
+      }
 
       if (error) {
         console.error("Error retrying todo insert:", error);
@@ -365,11 +388,24 @@ export function useTodos() {
       }
     }
 
-    const { data, error } = await supabase
-      .from("todos")
-      .update(mapTodoToDatabase(todo))
-      .eq("id", id)
-      .select();
+    const attemptUpdate = async (allowCategories) =>
+      supabase
+        .from("todos")
+        .update(prepareDbPayload(todo, { includeCategories: allowCategories }))
+        .eq("id", id)
+        .select();
+
+    let data;
+    let error;
+    ({ data, error } = await attemptUpdate(supportsCategories));
+
+    if (error && supportsCategories) {
+      const msg = (error.message || "").toLowerCase();
+      if (msg.includes("categories") && msg.includes("column")) {
+        setSupportsCategories(false);
+        ({ data, error } = await attemptUpdate(false));
+      }
+    }
 
     if (error) {
       console.error("Error retrying todo update:", error);
@@ -419,11 +455,24 @@ export function useTodos() {
       return next;
     });
 
-    const { data, error } = await supabase
-      .from("todos")
-      .update(mapTodoToDatabase(updates))
-      .eq("id", id)
-      .select();
+    const attemptUpdate = async (allowCategories) =>
+      supabase
+        .from("todos")
+        .update(prepareDbPayload(updates, { includeCategories: allowCategories }))
+        .eq("id", id)
+        .select();
+
+    let data;
+    let error;
+    ({ data, error } = await attemptUpdate(supportsCategories));
+
+    if (error && supportsCategories) {
+      const msg = (error.message || "").toLowerCase();
+      if (msg.includes("categories") && msg.includes("column")) {
+        setSupportsCategories(false);
+        ({ data, error } = await attemptUpdate(false));
+      }
+    }
 
     if (error) {
       console.error("Error updating todo:", error);
