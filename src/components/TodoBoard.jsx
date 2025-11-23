@@ -116,6 +116,11 @@ function TodoBoard({
                           ? actions.syncStateById.get(todo.id) ?? "synced"
                           : "synced"
                       }
+                      syncError={
+                        actions.syncErrorById instanceof Map
+                          ? actions.syncErrorById.get(todo.id) ?? ""
+                          : ""
+                      }
                       onRetrySync={actions.retryTodoSync}
                       dragState={cardDnD}
                       categoryLookup={categoryLookup}

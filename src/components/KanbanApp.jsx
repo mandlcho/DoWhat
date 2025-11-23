@@ -33,6 +33,7 @@ function KanbanApp() {
     archivedTodos, 
     setArchivedTodos, 
     syncStateById,
+    syncErrorById,
     addTodo, 
     updateTodo, 
     retryTodoSync,
@@ -440,6 +441,7 @@ function KanbanApp() {
       updateTodoPriority,
       handleDismiss,
       syncStateById,
+      syncErrorById,
       retryTodoSync
     }),
     [
@@ -449,6 +451,7 @@ function KanbanApp() {
       updateTodoPriority,
       handleDismiss,
       syncStateById,
+      syncErrorById,
       retryTodoSync
     ]
   );

@@ -37,6 +37,7 @@ function TodoCard({
   todo,
   actions,
   syncState = "synced",
+  syncError = "",
   onRetrySync = null,
   dragState = null,
   categoryLookup = null,
@@ -238,9 +239,10 @@ function TodoCard({
             onClick={handleRetryClick}
             aria-label={
               syncState === "failed"
-                ? `sync failed for ${todo.title}. click to retry.`
+                ? `sync failed for ${todo.title}. click to retry.${syncError ? ` reason: ${syncError}` : ""}`
                 : `sync status: ${syncLabel}`
             }
+            title={syncError || undefined}
             disabled={syncState !== "failed"}
           >
             {syncLabel}

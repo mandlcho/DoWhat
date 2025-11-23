@@ -90,6 +90,7 @@ export function useTodos() {
   const [archivedTodos, setArchivedTodos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [syncStateById, setSyncStateById] = useState(new Map());
+  const [syncErrorById, setSyncErrorById] = useState(new Map());
   const user = session?.user;
 
   const refreshTodos = useCallback(async () => {
@@ -98,6 +99,7 @@ export function useTodos() {
       setArchivedTodos([]);
       setLoading(false);
       setSyncStateById(new Map());
+      setSyncErrorById(new Map());
       return { data: [], error: null };
     }
 
@@ -122,6 +124,7 @@ export function useTodos() {
       mapped.forEach((todo) => next.set(todo.id, "synced"));
       return next;
     });
+    setSyncErrorById(new Map());
     setLoading(false);
     return { data: mapped, error: null };
   }, [user]);
@@ -200,6 +203,11 @@ export function useTodos() {
         next.set(tempId, "syncing");
         return next;
       });
+      setSyncErrorById((prev) => {
+        const next = new Map(prev);
+        next.delete(tempId);
+        return next;
+      });
     }
 
     const { data, error } = await supabase
@@ -212,6 +220,11 @@ export function useTodos() {
       setSyncStateById((prev) => {
         const next = new Map(prev);
         next.set(tempId, "failed");
+        return next;
+      });
+      setSyncErrorById((prev) => {
+        const next = new Map(prev);
+        next.set(tempId, error.message || "Unknown error");
         return next;
       });
       return { success: false, error };
@@ -233,6 +246,12 @@ export function useTodos() {
         next.set(created.id, "synced");
         return next;
       });
+      setSyncErrorById((prev) => {
+        const next = new Map(prev);
+        next.delete(tempId);
+        next.delete(created.id);
+        return next;
+      });
     }
 
     // Always refresh from the server to guarantee state matches what was persisted.
@@ -249,6 +268,11 @@ export function useTodos() {
         next.set(matched.id, "synced");
         return next;
       });
+      setSyncErrorById((prev) => {
+        const next = new Map(prev);
+        next.delete(matched.id);
+        return next;
+      });
       return { success: true, todo: matched };
     }
 
@@ -256,6 +280,13 @@ export function useTodos() {
       const next = new Map(prev);
       if (newId) {
         next.set(newId, "failed");
+      }
+      return next;
+    });
+    setSyncErrorById((prev) => {
+      const next = new Map(prev);
+      if (newId) {
+        next.set(newId, "Unable to confirm the new task was saved.");
       }
       return next;
     });
@@ -281,6 +312,11 @@ export function useTodos() {
       next.set(id, "syncing");
       return next;
     });
+    setSyncErrorById((prev) => {
+      const next = new Map(prev);
+      next.delete(id);
+      return next;
+    });
 
     if (isTempId(todo.id)) {
       const { data, error } = await supabase
@@ -293,6 +329,11 @@ export function useTodos() {
         setSyncStateById((prev) => {
           const next = new Map(prev);
           next.set(id, "failed");
+          return next;
+        });
+        setSyncErrorById((prev) => {
+          const next = new Map(prev);
+          next.set(id, error.message || "Unknown error");
           return next;
         });
         return { success: false, error };
@@ -314,6 +355,12 @@ export function useTodos() {
           next.set(created.id, "synced");
           return next;
         });
+        setSyncErrorById((prev) => {
+          const next = new Map(prev);
+          next.delete(id);
+          next.delete(created.id);
+          return next;
+        });
         return { success: true, todo: created };
       }
     }
@@ -331,6 +378,11 @@ export function useTodos() {
         next.set(id, "failed");
         return next;
       });
+      setSyncErrorById((prev) => {
+        const next = new Map(prev);
+        next.set(id, error.message || "Unknown error");
+        return next;
+      });
       return { success: false, error };
     }
 
@@ -340,6 +392,11 @@ export function useTodos() {
       setSyncStateById((prev) => {
         const next = new Map(prev);
         next.set(updated.id, "synced");
+        return next;
+      });
+      setSyncErrorById((prev) => {
+        const next = new Map(prev);
+        next.delete(updated.id);
         return next;
       });
       return { success: true, todo: updated };
@@ -356,6 +413,11 @@ export function useTodos() {
       next.set(id, "syncing");
       return next;
     });
+    setSyncErrorById((prev) => {
+      const next = new Map(prev);
+      next.delete(id);
+      return next;
+    });
 
     const { data, error } = await supabase
       .from("todos")
@@ -370,6 +432,11 @@ export function useTodos() {
         next.set(id, "failed");
         return next;
       });
+      setSyncErrorById((prev) => {
+        const next = new Map(prev);
+        next.set(id, error.message || "Unknown error");
+        return next;
+      });
       return null;
     }
 
@@ -379,6 +446,11 @@ export function useTodos() {
       setSyncStateById((prev) => {
         const next = new Map(prev);
         next.set(updated.id, "synced");
+        return next;
+      });
+      setSyncErrorById((prev) => {
+        const next = new Map(prev);
+        next.delete(updated.id);
         return next;
       });
     }
@@ -422,6 +494,7 @@ export function useTodos() {
     archivedTodos,
     setArchivedTodos,
     syncStateById,
+    syncErrorById,
     stats,
     addTodo,
     updateTodo,
