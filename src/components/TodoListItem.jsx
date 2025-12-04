@@ -266,10 +266,32 @@ function TodoListItem({
             aria-label={
               todo.status === "active"
                 ? `return ${todo.title} to backlog`
+                : todo.status === "completed" || todo.completed || todo.is_complete
+                ? `archive ${todo.title}`
                 : `delete ${todo.title}`
             }
+            title={
+              todo.status === "active"
+                ? "Move back to backlog"
+                : todo.status === "completed" || todo.completed || todo.is_complete
+                ? "Archive completed task"
+                : "Delete task"
+            }
           >
-            A-
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="1em"
+              height="1em"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="12" y1="4" x2="4" y2="12"></line>
+              <line x1="4" y1="4" x2="12" y2="12"></line>
+            </svg>
           </button>
         </div>
       </div>

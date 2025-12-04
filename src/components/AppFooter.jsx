@@ -8,6 +8,12 @@ function AppFooter({
   archivedCount,
   archiveToggleRef = null
 }) {
+  const archiveButtonLabel = stats.completed === 0
+    ? "clear completed"
+    : stats.completed === 1
+    ? "clear 1 completed task"
+    : `clear ${stats.completed} completed tasks`;
+
   return (
     <footer className="app-footer">
       <div className="footer-stats">
@@ -20,8 +26,9 @@ function AppFooter({
           type="button"
           onClick={onArchiveCompleted}
           disabled={stats.completed === 0}
+          title={stats.completed > 0 ? `Delete ${stats.completed} completed task${stats.completed === 1 ? '' : 's'}` : 'No completed tasks to clear'}
         >
-          archive
+          {archiveButtonLabel}
         </button>
         <button
           type="button"

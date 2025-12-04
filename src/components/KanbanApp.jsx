@@ -167,19 +167,31 @@ function KanbanApp() {
 
   const archiveCompleted = useCallback(async () => {
     const completedTodos = todos.filter(
-      (todo) => todo.status === "completed" || todo.completed
+      (todo) => todo.status === "completed" || todo.completed || todo.is_complete
     );
 
     if (completedTodos.length === 0) {
       return;
     }
 
-    const updates = completedTodos.map(todo => 
-      updateTodo(todo.id, { archivedAt: new Date().toISOString() })
+    // Show confirmation since archive isn't supported (will delete permanently)
+    const confirmMessage = completedTodos.length === 1
+      ? `Delete "${completedTodos[0].title}"?\n\nNote: Archive is not available, this will permanently delete the task.`
+      : `Delete ${completedTodos.length} completed tasks?\n\nNote: Archive is not available, this will permanently delete them.`;
+
+    const confirmed = window.confirm(confirmMessage);
+    if (!confirmed) {
+      return;
+    }
+
+    console.log('[archiveCompleted] Deleting', completedTodos.length, 'completed todos');
+
+    await Promise.all(
+      completedTodos.map(todo => deleteTodo(todo.id))
     );
-    
-    await Promise.all(updates);
-  }, [todos, updateTodo]);
+
+    console.log('[archiveCompleted] Deleted', completedTodos.length, 'completed todos');
+  }, [todos, deleteTodo]);
 
   const reorderByPriorityFocus = useCallback(
     (items) => {
@@ -325,22 +337,18 @@ function KanbanApp() {
 
   const updateTodoStatus = useCallback(
     async (id, status) => {
-      const timestamp = new Date().toISOString();
       const todo = todos.find(t => t.id === id);
-      if (!todo) return;
+      if (!todo) {
+        console.error('[updateTodoStatus] Todo not found:', id);
+        return;
+      }
 
       const updates = {
         status,
-        is_complete: status === "completed",
-        activatedAt:
-          status === "active"
-            ? todo.activatedAt ?? timestamp
-            : status === "completed"
-            ? todo.activatedAt ?? timestamp
-            : null,
-        completedAt: status === "completed" ? timestamp : null
+        is_complete: status === "completed"
       };
-      
+
+      console.log('[updateTodoStatus] Updating status:', { id, currentStatus: todo.status, newStatus: status, updates });
       await updateTodo(id, updates);
     },
     [todos, updateTodo]
@@ -385,14 +393,41 @@ function KanbanApp() {
   );
 
   const handleDismiss = useCallback(
-    (todo) => {
+    async (todo) => {
+      // Active task: Move back to backlog (soft dismiss)
       if (todo.status === "active") {
         moveToBacklog(todo.id);
         return;
       }
-      removeTodo(todo.id);
+
+      // Done/Completed task: Archive automatically (preserve completed work)
+      if (todo.status === "completed" || todo.completed || todo.is_complete) {
+        const archiveTimestamp = new Date().toISOString();
+        await updateTodo(todo.id, { archivedAt: archiveTimestamp });
+        return;
+      }
+
+      // Backlog task: Ask for confirmation before permanent deletion
+      if (todo.status === "backlog") {
+        const confirmDelete = window.confirm(
+          `Permanently delete "${todo.title}"?\n\nThis cannot be undone.`
+        );
+        if (!confirmDelete) {
+          return;
+        }
+        removeTodo(todo.id);
+        return;
+      }
+
+      // Fallback: Delete with confirmation
+      const confirmDelete = window.confirm(
+        `Permanently delete "${todo.title}"?\n\nThis cannot be undone.`
+      );
+      if (confirmDelete) {
+        removeTodo(todo.id);
+      }
     },
-    [moveToBacklog, removeTodo]
+    [moveToBacklog, removeTodo, updateTodo]
   );
 
   const removeArchivedTodo = useCallback(
@@ -418,17 +453,32 @@ function KanbanApp() {
 
   const handleRemoveCategoryFromArchived = useCallback(
     async (todoId, categoryId) => {
-      // This will be handled by the real-time subscription or a full state refresh
+      if (!todoId || !categoryId) {
+        return;
+      }
+      const todo = archivedTodos.find(t => t.id === todoId);
+      if (!todo || !Array.isArray(todo.categories)) return;
+
+      const nextCategories = todo.categories.filter((category) => category !== categoryId);
+      await updateTodo(todoId, { categories: nextCategories });
     },
-    []
+    [archivedTodos, updateTodo]
   );
 
   const restoreArchivedTodo = useCallback(
-    async (todoId) => {
+    async (todoId, context = {}) => {
       if (!todoId) {
         return;
       }
-      await updateTodo(todoId, { archivedAt: null });
+      const updates = { archivedAt: null };
+
+      // If a specific status is provided, update it
+      if (context.status) {
+        updates.status = context.status;
+        updates.is_complete = context.status === "completed";
+      }
+
+      await updateTodo(todoId, updates);
     },
     [updateTodo]
   );

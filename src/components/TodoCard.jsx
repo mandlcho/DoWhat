@@ -254,7 +254,16 @@ function TodoCard({
             aria-label={
               todo.status === "active"
                 ? `return ${todo.title} to backlog`
+                : todo.status === "completed" || todo.completed || todo.is_complete
+                ? `archive ${todo.title}`
                 : `delete ${todo.title}`
+            }
+            title={
+              todo.status === "active"
+                ? "Move back to backlog"
+                : todo.status === "completed" || todo.completed || todo.is_complete
+                ? "Archive completed task"
+                : "Delete task"
             }
           >
             <svg

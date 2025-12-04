@@ -37,7 +37,7 @@ const mapTodoFromDatabase = (row) => {
   };
 };
 
-const mapTodoToDatabase = (todo) => {
+const mapTodoToDatabase = (todo, { includeTimestamps = true } = {}) => {
   if (!todo) return {};
   const mapping = {
     title: "title",
@@ -60,16 +60,23 @@ const mapTodoToDatabase = (todo) => {
     categories: "categories"
   };
 
+  // Skip timestamp fields if not supported by database
+  const timestampFields = ['activated_at', 'completed_at'];
+
   return Object.entries(todo).reduce((acc, [key, value]) => {
     const mappedKey = mapping[key];
     if (mappedKey) {
+      // Skip timestamp fields if includeTimestamps is false
+      if (!includeTimestamps && timestampFields.includes(mappedKey)) {
+        return acc;
+      }
       acc[mappedKey] = value;
     }
     return acc;
   }, {});
 };
-const prepareDbPayload = (todo, { includeCategories = true } = {}) => {
-  const mapped = mapTodoToDatabase(todo);
+const prepareDbPayload = (todo, { includeCategories = true, includeTimestamps = false } = {}) => {
+  const mapped = mapTodoToDatabase(todo, { includeTimestamps });
   if (!includeCategories) {
     delete mapped.categories;
   }
@@ -138,16 +145,46 @@ export function useTodos() {
   }, [user]);
 
   const upsertTodoInState = useCallback((nextTodo) => {
-    if (!nextTodo) return;
+    if (!nextTodo || !nextTodo.id) return;
 
     setTodos((current) => {
-      const filtered = current.filter((todo) => todo.id !== nextTodo.id);
-      return nextTodo.archivedAt ? filtered : [nextTodo, ...filtered];
+      // If archived, just remove from active todos
+      if (nextTodo.archivedAt) {
+        return current.filter((todo) => todo.id !== nextTodo.id);
+      }
+
+      // Find existing todo index
+      const existingIndex = current.findIndex((todo) => todo.id === nextTodo.id);
+
+      // If todo exists, replace it at the same position (preserves order)
+      if (existingIndex !== -1) {
+        const updated = [...current];
+        updated[existingIndex] = nextTodo;
+        return updated;
+      }
+
+      // New todo - add at the beginning
+      return [nextTodo, ...current];
     });
 
     setArchivedTodos((current) => {
-      const filtered = current.filter((todo) => todo.id !== nextTodo.id);
-      return nextTodo.archivedAt ? [nextTodo, ...filtered] : filtered;
+      // If not archived, just remove from archived todos
+      if (!nextTodo.archivedAt) {
+        return current.filter((todo) => todo.id !== nextTodo.id);
+      }
+
+      // Find existing todo index
+      const existingIndex = current.findIndex((todo) => todo.id === nextTodo.id);
+
+      // If todo exists, replace it at the same position (preserves order)
+      if (existingIndex !== -1) {
+        const updated = [...current];
+        updated[existingIndex] = nextTodo;
+        return updated;
+      }
+
+      // New archived todo - add at the beginning
+      return [nextTodo, ...current];
     });
   }, []);
 
@@ -172,12 +209,14 @@ export function useTodos() {
         "postgres_changes",
         { event: "*", schema: "public", table: "todos" },
         (payload) => {
+          console.log('[realtime] event:', payload.eventType, 'data:', payload.new);
           if (payload.eventType === "DELETE") {
             removeTodoFromState(payload.old.id);
             return;
           }
 
           const nextTodo = mapTodoFromDatabase(payload.new);
+          console.log('[realtime] mapped todo:', { id: nextTodo?.id, status: nextTodo?.status, priority: nextTodo?.priority });
           if (!nextTodo) {
             return;
           }
@@ -435,8 +474,27 @@ export function useTodos() {
     return { success: false, error: new Error("Unable to retry sync.") };
   };
 
-  const updateTodo = async (id, updates) => {
+  const updateTodo = useCallback(async (id, updates) => {
     if (!user || !id) return null;
+
+    // Find the current todo to create optimistic update
+    const currentTodo = [...todos, ...archivedTodos].find(t => t.id === id);
+    if (!currentTodo) return null;
+
+    // Create optimistic update by directly merging updates (preserve id and all fields)
+    const optimisticTodo = {
+      ...currentTodo,
+      ...updates
+    };
+
+    console.log('[updateTodo] currentTodo:', { id: currentTodo.id, status: currentTodo.status, priority: currentTodo.priority });
+    console.log('[updateTodo] updates:', updates);
+    console.log('[updateTodo] optimisticTodo:', { id: optimisticTodo.id, status: optimisticTodo.status, priority: optimisticTodo.priority });
+
+    // Apply optimistic update immediately
+    if (optimisticTodo) {
+      upsertTodoInState(optimisticTodo);
+    }
 
     setSyncStateById((prev) => {
       const next = new Map(prev);
@@ -449,12 +507,15 @@ export function useTodos() {
       return next;
     });
 
-    const attemptUpdate = async (allowCategories) =>
-      supabase
+    const attemptUpdate = async (allowCategories) => {
+      const payload = prepareDbPayload(updates, { includeCategories: allowCategories });
+      console.log('[updateTodo] sending to DB:', payload);
+      return supabase
         .from("todos")
-        .update(prepareDbPayload(updates, { includeCategories: allowCategories }))
+        .update(payload)
         .eq("id", id)
         .select();
+    };
 
     let data;
     let error;
@@ -466,7 +527,21 @@ export function useTodos() {
     }
 
     if (error) {
-      console.error("Error updating todo:", error);
+      console.error("[updateTodo] ERROR updating todo:", {
+        id,
+        updates,
+        error,
+        errorMessage: error.message,
+        errorDetails: error.details,
+        errorHint: error.hint,
+        errorCode: error.code,
+        payload: prepareDbPayload(updates, { includeCategories: supportsCategories })
+      });
+      // Revert optimistic update on error
+      if (currentTodo) {
+        console.log("[updateTodo] Reverting to:", { id: currentTodo.id, status: currentTodo.status, priority: currentTodo.priority });
+        upsertTodoInState(currentTodo);
+      }
       setSyncStateById((prev) => {
         const next = new Map(prev);
         next.set(id, "failed");
@@ -481,21 +556,31 @@ export function useTodos() {
     }
 
     const updated = mapTodoFromDatabase(data?.[0]);
+    console.log('[updateTodo] server response:', { id: updated?.id, status: updated?.status, priority: updated?.priority, raw: data?.[0] });
     if (updated) {
-      upsertTodoInState(updated);
+      // Merge server response with optimistic update to preserve any local changes
+      // This prevents the server from overwriting fields we just updated with stale data
+      const merged = {
+        ...updated,
+        ...optimisticTodo  // Keep the optimistic changes (they should match what we sent)
+      };
+      console.log('[updateTodo] merged final:', { id: merged.id, status: merged.status, priority: merged.priority });
+
+      upsertTodoInState(merged);
       setSyncStateById((prev) => {
         const next = new Map(prev);
-        next.set(updated.id, "synced");
+        next.set(merged.id, "synced");
         return next;
       });
       setSyncErrorById((prev) => {
         const next = new Map(prev);
-        next.delete(updated.id);
+        next.delete(merged.id);
         return next;
       });
+      return merged;
     }
     return updated;
-  };
+  }, [user, todos, archivedTodos, upsertTodoInState, supportsCategories]);
 
   const deleteTodo = async (id) => {
     if (!user || !id) return;
