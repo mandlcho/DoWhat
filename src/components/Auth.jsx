@@ -120,9 +120,9 @@ export default function Auth() {
             <h2>your vault code</h2>
           </header>
           <p className="auth-hint">
-            copy this code and enter it on your other devices so they can access
-            the same tasks. keep it safe &mdash; it is your vault&apos;s
-            identity.
+            this is <strong>not</strong> your PIN. it is a long random string
+            that identifies your vault. copy it and paste it on your other
+            devices when you join.
           </p>
           <div className="vault-code-display">
             <code className="vault-code-text">{createdToken}</code>
@@ -136,7 +136,8 @@ export default function Auth() {
             </button>
           </div>
           <p className="auth-hint">
-            you are already logged in on this device. tap &ldquo;done&rdquo; to
+            on the other device: tap &ldquo;join vault&rdquo;, paste this code,
+            then enter the PIN you just set. tap &ldquo;done&rdquo; here to
             start adding tasks.
           </p>
           <button
@@ -242,7 +243,7 @@ export default function Auth() {
             </label>
             <input
               id="join-code"
-              className="auth-input"
+              className="auth-input auth-input--code"
               type="text"
               autoComplete="off"
               placeholder="paste vault code here"
@@ -250,6 +251,10 @@ export default function Auth() {
               onChange={(e) => setVaultCode(e.target.value)}
               required
             />
+            <p className="auth-hint auth-hint--code">
+              a long random string from the device that created the vault
+              &mdash; not your PIN.
+            </p>
             <label htmlFor="join-pin" className="auth-label">
               PIN
             </label>
