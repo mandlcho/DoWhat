@@ -54,7 +54,7 @@ export default function Auth() {
       <div className="auth-card minimal" aria-live="polite">
         <header className="auth-card-header">
           <p>welcome</p>
-          <h2>sign in to kanban</h2>
+          <h2>sign in to DoWhat</h2>
         </header>
         <form className="auth-form">
           <label htmlFor="email" className="auth-label">

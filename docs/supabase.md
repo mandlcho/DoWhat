@@ -1,6 +1,6 @@
 ## Supabase Setup (web)
 
-Follow these steps to connect the web Kanban board to Supabase. The app only needs the anonymous client URL/key at runtime; everything else stays server-side inside Supabase.
+Follow these steps to connect DoWhat to Supabase. The app only needs the anonymous client URL/key at runtime; everything else stays server-side inside Supabase.
 
 ### 1) Project settings
 - Enable Email/Password auth in **Authentication → Providers**.
@@ -20,7 +20,7 @@ create table if not exists public.categories (
   created_at timestamptz default now()
 );
 
--- Todos for the Kanban board
+-- Todos for DoWhat
 create table if not exists public.todos (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users (id) on delete cascade,

@@ -1,6 +1,6 @@
 import { useSession } from "./hooks/useSession";
 import Auth from "./components/Auth";
-import KanbanApp from "./components/KanbanApp";
+import DoWhatApp from "./components/DoWhatApp";
 import "./App.css";
 
 function App() {
@@ -29,7 +29,7 @@ function App() {
 
   return (
     <div className="container" style={{ padding: "50px 0 100px 0" }}>
-      {!session ? <Auth /> : <KanbanApp key={session.user.id} session={session} />}
+      {!session ? <Auth /> : <DoWhatApp key={session.user.id} session={session} />}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
-const repoBase = "/the-kanban/";
+const repoBase = "/DoWhat/";
 
 export default defineConfig({
   plugins: [react()],

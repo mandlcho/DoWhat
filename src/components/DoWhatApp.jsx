@@ -25,7 +25,7 @@ const CARD_COLUMNS = [
   { key: "completed", label: "done" }
 ];
 
-function KanbanApp() {
+function DoWhatApp() {
   const { 
     todos, 
     setTodos, 
@@ -611,4 +611,4 @@ function KanbanApp() {
   );
 }
 
-export default KanbanApp;
+export default DoWhatApp;
