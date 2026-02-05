@@ -1,4 +1,5 @@
 import { VaultProvider, useVault } from "./hooks/useVault";
+import { useInputDevice } from "./hooks/useInputDevice";
 import { isSupabaseConfigured } from "./supabaseClient";
 import Auth from "./components/Auth";
 import DoWhatApp from "./components/DoWhatApp";
@@ -28,6 +29,8 @@ function AppInner() {
 }
 
 function App() {
+  useInputDevice();
+
   return (
     <VaultProvider>
       <AppInner />

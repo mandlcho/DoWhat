@@ -2055,3 +2055,107 @@
   font-size: 0.75rem;
   text-transform: none;
 }
+
+/* --------------------------------------------------------- touch layout ---- */
+/* Enlarge tap targets and add breathing room when a touch device is detected. */
+[data-input="touch"] .button.primary,
+[data-input="touch"] .button.ghost {
+  padding: 0.7rem 1.4rem;
+  font-size: 0.9rem;
+}
+
+[data-input="touch"] .auth-input {
+  padding: 0.7rem 0.85rem;
+  font-size: 1rem;
+}
+
+[data-input="touch"] .vault-tab {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+}
+
+[data-input="touch"] .vault-code-copy {
+  padding: 0.45rem 0.8rem;
+}
+
+[data-input="touch"] .todo-status-btn,
+[data-input="touch"] .todo-priority-btn,
+[data-input="touch"] .todo-dismiss-btn {
+  padding: 0.55rem 0.7rem;
+  min-width: 2.2rem;
+  min-height: 2.2rem;
+}
+
+[data-input="touch"] .todo-details-toggle {
+  padding: 0.4rem 0;
+  min-height: 1.8rem;
+}
+
+[data-input="touch"] .category-tag {
+  padding: 0.4rem 0.7rem;
+  font-size: 0.82rem;
+}
+
+[data-input="touch"] .category-tag-remove {
+  padding: 0.25rem 0.35rem;
+  min-width: 1.4rem;
+  min-height: 1.4rem;
+}
+
+[data-input="touch"] .todo-list:not(.card-view) .todo {
+  padding: 0.85rem 1rem;
+}
+
+[data-input="touch"] .todo-list.card-view .todo-card {
+  padding: 0.85rem 0.9rem;
+}
+
+[data-input="touch"] .archive-close,
+[data-input="touch"] .archived-delete {
+  padding: 0.4rem;
+  min-width: 2rem;
+  min-height: 2rem;
+}
+
+[data-input="touch"] .confirm-bar-cancel,
+[data-input="touch"] .confirm-bar-confirm {
+  padding: 0.6rem 1rem;
+}
+
+[data-input="touch"] .theme-toggle-button {
+  padding: 0.5rem 0.7rem;
+  min-height: 2rem;
+}
+
+[data-input="touch"] .filter-btn {
+  padding: 0.5rem 0.8rem;
+}
+
+[data-input="touch"] .calendar-day {
+  min-width: 2.2rem;
+  min-height: 2.2rem;
+}
+
+[data-input="touch"] .category-color-swatch {
+  width: 1.6rem;
+  height: 1.6rem;
+}
+
+/* Hide hover states on touch — they stick and look broken */
+[data-input="touch"] button:hover,
+[data-input="touch"] .vault-tab:hover:not(.active),
+[data-input="touch"] .vault-code-copy:hover,
+[data-input="touch"] .theme-toggle-button:hover,
+[data-input="touch"] .todo-details-toggle:hover,
+[data-input="touch"] .category-tag-remove:hover,
+[data-input="touch"] .archive-close:hover,
+[data-input="touch"] .archived-delete:hover,
+[data-input="touch"] .confirm-bar-cancel:hover,
+[data-input="touch"] .confirm-bar-confirm:hover,
+[data-input="touch"] .calendar-day:hover,
+[data-input="touch"] .category-color-swatch:hover,
+[data-input="touch"] .auth-reset-link:hover {
+  background: unset;
+  border-color: inherit;
+  color: inherit;
+}
