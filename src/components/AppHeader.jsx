@@ -1,3 +1,4 @@
+import { useState } from "react";
 import PropTypes from "prop-types";
 import ThemeToggle from "./ThemeToggle";
 import { useVault } from "../hooks/useVault";
@@ -9,6 +10,15 @@ function AppHeader({
   onThemeModeChange,
 }) {
   const { vaultId, leaveVault } = useVault();
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyVault = () => {
+    if (!vaultId) return;
+    navigator.clipboard.writeText(vaultId).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  };
 
   return (
     <header className="app-header">
@@ -16,7 +26,14 @@ function AppHeader({
         <h1>tasks</h1>
         <div className="header-controls">
           {vaultId && (
-            <p className="vault-id-label">vault …{vaultId.slice(-8)}</p>
+            <button
+              type="button"
+              className="theme-toggle-button vault-copy-button"
+              onClick={handleCopyVault}
+              aria-label="copy vault code"
+            >
+              {copied ? "copied" : "vault"}
+            </button>
           )}
           <button className="button" onClick={leaveVault}>
             leave

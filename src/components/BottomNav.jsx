@@ -1,4 +1,6 @@
+import { useState } from "react";
 import PropTypes from "prop-types";
+import { useVault } from "../hooks/useVault";
 
 function BottomNav({
   filter,
@@ -13,6 +15,16 @@ function BottomNav({
   archivedCount,
   archiveToggleRef,
 }) {
+  const { vaultId } = useVault();
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyVault = () => {
+    if (!vaultId) return;
+    navigator.clipboard.writeText(vaultId).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  };
   return (
     <nav className="bottom-nav" aria-label="main navigation">
       <div
@@ -59,6 +71,14 @@ function BottomNav({
       <div className="bottom-nav-divider" />
 
       <div className="bottom-nav-actions">
+        <button
+          type="button"
+          className="bottom-nav-action"
+          onClick={handleCopyVault}
+          aria-label="copy vault code"
+        >
+          {copied ? "copied" : "vault"}
+        </button>
         <button
           type="button"
           className="bottom-nav-action"
