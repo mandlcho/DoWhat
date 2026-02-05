@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import PropTypes from "prop-types";
 import ThemeToggle from "./ThemeToggle";
 import { useVault } from "../hooks/useVault";
+
+const STORAGE_KEY_TITLE = "doWhat_vault_title";
 
 function AppHeader({
   viewMode,
@@ -11,6 +13,25 @@ function AppHeader({
 }) {
   const { vaultId, leaveVault } = useVault();
   const [copied, setCopied] = useState(false);
+  const [title, setTitle] = useState(
+    () => localStorage.getItem(STORAGE_KEY_TITLE) || "tasks",
+  );
+  const [editing, setEditing] = useState(false);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (editing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [editing]);
+
+  const commitTitle = useCallback(() => {
+    const val = title.trim() || "tasks";
+    setTitle(val);
+    localStorage.setItem(STORAGE_KEY_TITLE, val);
+    setEditing(false);
+  }, [title]);
 
   const handleCopyVault = () => {
     if (!vaultId) return;
@@ -23,22 +44,57 @@ function AppHeader({
   return (
     <header className="app-header">
       <div className="app-header-top">
-        <h1>tasks</h1>
+        {editing ? (
+          <input
+            ref={inputRef}
+            className="header-title-input"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onBlur={commitTitle}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") commitTitle();
+              if (e.key === "Escape") {
+                setTitle(localStorage.getItem(STORAGE_KEY_TITLE) || "tasks");
+                setEditing(false);
+              }
+            }}
+            autoComplete="off"
+            spellCheck={false}
+          />
+        ) : (
+          <h1
+            className="header-title-editable"
+            onClick={() => setEditing(true)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") setEditing(true);
+            }}
+            role="button"
+            tabIndex={0}
+            aria-label={`rename: ${title}`}
+          >
+            {title}
+          </h1>
+        )}
         <div className="header-controls">
           {vaultId && (
             <button
               type="button"
-              className="theme-toggle-button vault-copy-button"
+              className="header-btn-ghost"
               onClick={handleCopyVault}
               aria-label="copy vault code"
             >
               {copied ? "copied" : "vault"}
             </button>
           )}
-          <button className="button" onClick={leaveVault}>
-            leave
-          </button>
           <ThemeToggle value={themeMode} onChange={onThemeModeChange} />
+          <button
+            type="button"
+            className="header-btn-leave"
+            onClick={leaveVault}
+            aria-label="leave vault"
+          >
+            ×
+          </button>
           <div className="view-toggles" role="group" aria-label="view mode">
             <button
               type="button"

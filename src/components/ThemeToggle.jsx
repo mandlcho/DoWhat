@@ -1,6 +1,8 @@
 import PropTypes from "prop-types";
 import { THEME_OPTIONS } from "../hooks/useThemePreference";
 
+const THEME_ICONS = { light: "☀️", dark: "🌙", system: "🌐" };
+
 const getNextTheme = (current) => {
   const index = THEME_OPTIONS.indexOf(current);
   if (index === -1) {
@@ -11,28 +13,23 @@ const getNextTheme = (current) => {
 
 function ThemeToggle({ value, onChange }) {
   const nextTheme = getNextTheme(value);
-  const ariaLabel = `toggle theme (current: ${value}, next: ${nextTheme})`;
 
   return (
     <button
       type="button"
-      className={`theme-toggle-button theme-${value}`}
+      className="theme-toggle-round"
       onClick={() => onChange(nextTheme)}
-      aria-label={ariaLabel}
-      title={`switch theme (current: ${value})`}
+      aria-label={`theme: ${value}, tap for ${nextTheme}`}
+      title={`theme: ${value}`}
     >
-      <span className="theme-toggle-icon" aria-hidden="true">
-        💡
-      </span>
-      <span className="theme-toggle-text">{value}</span>
+      <span aria-hidden="true">{THEME_ICONS[value]}</span>
     </button>
   );
 }
 
 ThemeToggle.propTypes = {
   value: PropTypes.oneOf(THEME_OPTIONS).isRequired,
-  onChange: PropTypes.func.isRequired
+  onChange: PropTypes.func.isRequired,
 };
 
 export default ThemeToggle;
-

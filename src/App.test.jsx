@@ -342,7 +342,7 @@ describe("App", () => {
 
   it("renders heading", async () => {
     await renderReadyApp();
-    expect(screen.getByRole("heading", { name: /tasks/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/rename: tasks/i)).toBeInTheDocument();
   });
 
   it("allows setting and updating todo priority", async () => {
