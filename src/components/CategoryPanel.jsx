@@ -7,11 +7,13 @@ function CategoryPanel({
   selected,
   onToggleCategory,
   onCreateCategory,
-  onRemoveCategory
+  onRemoveCategory,
 }) {
   const [isAdding, setIsAdding] = useState(false);
   const [newLabel, setNewLabel] = useState("");
+  const [newColor, setNewColor] = useState("#6b7280");
   const [error, setError] = useState("");
+  const [pendingDeleteCategory, setPendingDeleteCategory] = useState(null);
 
   const handleToggle = (categoryId) => {
     onToggleCategory(categoryId);
@@ -23,13 +25,14 @@ function CategoryPanel({
       setError("enter a name to add a category.");
       return;
     }
-    const created = await onCreateCategory(newLabel);
+    const created = await onCreateCategory(newLabel, newColor);
     if (!created) {
       setError("category already exists.");
       return;
     }
     onToggleCategory(created.id);
     setNewLabel("");
+    setNewColor("#6b7280");
     setError("");
     setIsAdding(false);
   };
@@ -43,18 +46,13 @@ function CategoryPanel({
   const handleCancel = () => {
     setIsAdding(false);
     setNewLabel("");
+    setNewColor("#6b7280");
     setError("");
   };
 
   const handleContextMenu = (event, category) => {
     event.preventDefault();
-    const shouldRemove = window.confirm(
-      `delete category "${category.label}"?`
-    );
-    if (!shouldRemove) {
-      return;
-    }
-    onRemoveCategory(category.id);
+    setPendingDeleteCategory(category);
   };
 
   const handleDragStart = (event, category) => {
@@ -95,7 +93,11 @@ function CategoryPanel({
           </button>
         </div>
       </div>
-      <div className="category-chip-group" role="group" aria-label="select categories">
+      <div
+        className="category-chip-group"
+        role="group"
+        aria-label="select categories"
+      >
         {categories.map((category) => {
           const isSelected = selected.includes(category.id);
           return (
@@ -139,9 +141,58 @@ function CategoryPanel({
             autoFocus
           />
           <button type="submit">save</button>
+          <div
+            className="category-color-swatches"
+            role="group"
+            aria-label="pick a colour"
+          >
+            {[
+              "#2563eb",
+              "#059669",
+              "#d97706",
+              "#9333ea",
+              "#dc2626",
+              "#0891b2",
+              "#65a30d",
+              "#6b7280",
+            ].map((color) => (
+              <button
+                key={color}
+                type="button"
+                className={`category-color-swatch${newColor === color ? " active" : ""}`}
+                style={{ "--swatch-color": color }}
+                onClick={() => setNewColor(color)}
+                aria-pressed={newColor === color}
+                aria-label={`colour ${color}`}
+              />
+            ))}
+          </div>
         </form>
       ) : null}
       {error ? <p className="category-error">{error}</p> : null}
+      {pendingDeleteCategory && (
+        <div className="category-confirm" role="alert">
+          <span>delete &ldquo;{pendingDeleteCategory.label}&rdquo;?</span>
+          <div className="category-confirm-actions">
+            <button
+              type="button"
+              onClick={() => setPendingDeleteCategory(null)}
+            >
+              cancel
+            </button>
+            <button
+              type="button"
+              className="category-confirm-delete"
+              onClick={() => {
+                onRemoveCategory(pendingDeleteCategory.id);
+                setPendingDeleteCategory(null);
+              }}
+            >
+              delete
+            </button>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
@@ -151,13 +202,13 @@ CategoryPanel.propTypes = {
     PropTypes.shape({
       id: PropTypes.string.isRequired,
       label: PropTypes.string.isRequired,
-      color: PropTypes.string.isRequired
-    })
+      color: PropTypes.string.isRequired,
+    }),
   ).isRequired,
   selected: PropTypes.arrayOf(PropTypes.string).isRequired,
   onToggleCategory: PropTypes.func.isRequired,
   onCreateCategory: PropTypes.func.isRequired,
-  onRemoveCategory: PropTypes.func.isRequired
+  onRemoveCategory: PropTypes.func.isRequired,
 };
 
 export default CategoryPanel;

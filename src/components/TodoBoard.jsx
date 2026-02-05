@@ -23,23 +23,21 @@ function TodoBoard({
   calendarFocusDate = "",
   onAssignCategory = null,
   onRemoveCategory = null,
-  onRestoreArchived = null
+  onRestoreArchived = null,
 }) {
   const [archivedDropColumn, setArchivedDropColumn] = useState("");
 
   const cardOrderSignature = useMemo(() => {
     return columns
       .map(({ key, todos }) =>
-        todos
-          .map((todo) => `${key}:${todo.id}`)
-          .join("|")
+        todos.map((todo) => `${key}:${todo.id}`).join("|"),
       )
       .join("||");
   }, [columns]);
 
   const registerCard = useFlipAnimation({
     isEnabled: Boolean(dragAndDrop),
-    dependencyList: [cardOrderSignature]
+    dependencyList: [cardOrderSignature],
   });
 
   return (
@@ -74,12 +72,14 @@ function TodoBoard({
                   if (hasArchivedPayload(event)) {
                     event.preventDefault();
                     event.stopPropagation();
-                    const todoId = event.dataTransfer.getData(ARCHIVED_TODO_DRAG_TYPE);
+                    const todoId = event.dataTransfer.getData(
+                      ARCHIVED_TODO_DRAG_TYPE,
+                    );
                     if (todoId && typeof onRestoreArchived === "function") {
                       onRestoreArchived(todoId, {
                         status: key,
                         referenceId: null,
-                        position: "after"
+                        position: "after",
                       });
                     }
                     setArchivedDropColumn("");
@@ -93,11 +93,13 @@ function TodoBoard({
                     return;
                   }
                   baseProps.onDragLeave?.(event);
-                }
+                },
               };
             })()}
           >
-            <h2>{label}</h2>
+            <h2>
+              {label} <span className="column-count">{todos.length}</span>
+            </h2>
             {todos.length === 0 ? (
               <p className="column-empty">nothing here yet</p>
             ) : (
@@ -113,12 +115,12 @@ function TodoBoard({
                       actions={actions}
                       syncState={
                         actions.syncStateById instanceof Map
-                          ? actions.syncStateById.get(todo.id) ?? "synced"
+                          ? (actions.syncStateById.get(todo.id) ?? "synced")
                           : "synced"
                       }
                       syncError={
                         actions.syncErrorById instanceof Map
-                          ? actions.syncErrorById.get(todo.id) ?? ""
+                          ? (actions.syncErrorById.get(todo.id) ?? "")
                           : ""
                       }
                       onRetrySync={actions.retryTodoSync}
@@ -146,25 +148,25 @@ TodoBoard.propTypes = {
     PropTypes.shape({
       key: PropTypes.string.isRequired,
       label: PropTypes.string.isRequired,
-      todos: PropTypes.arrayOf(PropTypes.object).isRequired
-    })
+      todos: PropTypes.arrayOf(PropTypes.object).isRequired,
+    }),
   ).isRequired,
   actions: PropTypes.shape({
     toggleTodo: PropTypes.func.isRequired,
     moveToActive: PropTypes.func.isRequired,
     updateTodoStatus: PropTypes.func.isRequired,
     updateTodoPriority: PropTypes.func.isRequired,
-    handleDismiss: PropTypes.func.isRequired
+    handleDismiss: PropTypes.func.isRequired,
   }).isRequired,
   dragAndDrop: PropTypes.shape({
     getColumnProps: PropTypes.func,
-    getCardProps: PropTypes.func
+    getCardProps: PropTypes.func,
   }),
   categoryLookup: PropTypes.instanceOf(Map),
   calendarFocusDate: PropTypes.string,
   onAssignCategory: PropTypes.func,
   onRemoveCategory: PropTypes.func,
-  onRestoreArchived: PropTypes.func
+  onRestoreArchived: PropTypes.func,
 };
 
 export default TodoBoard;

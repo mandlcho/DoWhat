@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import App from "./App";
 
@@ -11,7 +17,7 @@ vi.mock("./hooks/useSession", () => {
     session: mockSession,
     error: null,
     loading: false,
-    isSupabaseConfigured: true
+    isSupabaseConfigured: true,
   });
   const SessionProvider = ({ children }) => children;
   return { useSession, SessionProvider };
@@ -47,8 +53,8 @@ vi.mock("./hooks/useTodos", () => {
           Array.isArray(todo.categories) && todo.categories.length > 0
             ? [...todo.categories]
             : lastCreatedCategoryId
-            ? [lastCreatedCategoryId]
-            : []
+              ? [lastCreatedCategoryId]
+              : [],
       };
       if (newTodo.archivedAt) {
         setArchivedTodos((prev) => [newTodo, ...prev]);
@@ -61,42 +67,52 @@ vi.mock("./hooks/useTodos", () => {
     const updateTodo = useCallback(async (id, updates) => {
       let updatedTodo = null;
       setTodos((prev) => {
-        const next = prev.map((todo) => {
-          if (todo.id !== id) return todo;
-          updatedTodo = {
-            ...todo,
-            ...updates,
-            dueDate: updates.due_date ?? updates.dueDate ?? todo.dueDate,
-            archivedAt: updates.archivedAt ?? updates.archived_at ?? todo.archivedAt,
-            completed: Boolean(updates.completed ?? updates.is_complete ?? todo.completed)
-          };
-          return updatedTodo.archivedAt ? null : updatedTodo;
-        }).filter(Boolean);
+        const next = prev
+          .map((todo) => {
+            if (todo.id !== id) return todo;
+            updatedTodo = {
+              ...todo,
+              ...updates,
+              dueDate: updates.due_date ?? updates.dueDate ?? todo.dueDate,
+              archivedAt:
+                updates.archivedAt ?? updates.archived_at ?? todo.archivedAt,
+              completed: Boolean(
+                updates.completed ?? updates.is_complete ?? todo.completed,
+              ),
+            };
+            return updatedTodo.archivedAt ? null : updatedTodo;
+          })
+          .filter(Boolean);
         return next;
       });
 
       setArchivedTodos((prev) => {
         const existing = prev.find((todo) => todo.id === id);
-        if (existing && (!updates.archivedAt && !updates.archived_at)) {
+        if (existing && !updates.archivedAt && !updates.archived_at) {
           const restored = {
             ...existing,
             ...updates,
             archivedAt: null,
-            dueDate: updates.due_date ?? updates.dueDate ?? existing.dueDate
+            dueDate: updates.due_date ?? updates.dueDate ?? existing.dueDate,
           };
           updatedTodo = restored;
           setTodos((current) => [restored, ...current]);
           return prev.filter((todo) => todo.id !== id);
         }
-        if (updatedTodo?.archivedAt || updates.archivedAt || updates.archived_at) {
-          const archivedVersion =
-            updatedTodo ??
-            {
-              ...(existing ?? {}),
-              ...updates,
-              id,
-              archivedAt: updates.archivedAt ?? updates.archived_at ?? new Date().toISOString()
-            };
+        if (
+          updatedTodo?.archivedAt ||
+          updates.archivedAt ||
+          updates.archived_at
+        ) {
+          const archivedVersion = updatedTodo ?? {
+            ...(existing ?? {}),
+            ...updates,
+            id,
+            archivedAt:
+              updates.archivedAt ??
+              updates.archived_at ??
+              new Date().toISOString(),
+          };
           return [archivedVersion, ...prev.filter((todo) => todo.id !== id)];
         }
         return prev;
@@ -112,19 +128,23 @@ vi.mock("./hooks/useTodos", () => {
 
     const stats = useMemo(() => {
       const total = todos.length;
-      const completed = todos.filter((todo) => todo.is_complete || todo.completed).length;
+      const completed = todos.filter(
+        (todo) => todo.is_complete || todo.completed,
+      ).length;
       const active = todos.filter(
-        (todo) => !(todo.is_complete || todo.completed) && todo.status === "active"
+        (todo) =>
+          !(todo.is_complete || todo.completed) && todo.status === "active",
       ).length;
       const backlog = todos.filter(
-        (todo) => !(todo.is_complete || todo.completed) && todo.status === "backlog"
+        (todo) =>
+          !(todo.is_complete || todo.completed) && todo.status === "backlog",
       ).length;
       return {
         total,
         backlog,
         active,
         completed,
-        remaining: total - completed
+        remaining: total - completed,
       };
     }, [todos]);
 
@@ -137,7 +157,7 @@ vi.mock("./hooks/useTodos", () => {
       addTodo,
       updateTodo,
       deleteTodo,
-      loading: false
+      loading: false,
     };
   };
 
@@ -150,7 +170,7 @@ vi.mock("./hooks/useCategories", () => {
     { id: "cat-work", label: "work", color: "#2563eb" },
     { id: "cat-personal", label: "personal", color: "#059669" },
     { id: "cat-errands", label: "errands", color: "#d97706" },
-    { id: "cat-learning", label: "learning", color: "#9333ea" }
+    { id: "cat-learning", label: "learning", color: "#9333ea" },
   ];
 
   const useCategories = () => {
@@ -159,13 +179,13 @@ vi.mock("./hooks/useCategories", () => {
     const addCategory = async (label) => {
       const normalized = label.trim().toLowerCase();
       const existing = categories.find(
-        (category) => category.label.toLowerCase() === normalized
+        (category) => category.label.toLowerCase() === normalized,
       );
       if (existing) return existing;
       const created = {
         id: `cat-${Math.random().toString(16).slice(2)}`,
         label: normalized,
-        color: "#6b7280"
+        color: "#6b7280",
       };
       lastCreatedCategoryId = created.id;
       setCategories((prev) => [...prev, created]);
@@ -173,14 +193,16 @@ vi.mock("./hooks/useCategories", () => {
     };
 
     const removeCategory = async (categoryId) => {
-      setCategories((prev) => prev.filter((category) => category.id !== categoryId));
+      setCategories((prev) =>
+        prev.filter((category) => category.id !== categoryId),
+      );
     };
 
     return {
       categories,
       addCategory,
       removeCategory,
-      loading: false
+      loading: false,
     };
   };
 
@@ -190,7 +212,7 @@ vi.mock("./hooks/useCategories", () => {
 vi.mock("./supabaseClient", () => {
   const tables = {
     todos: [],
-    categories: []
+    categories: [],
   };
 
   let idCounter = 1;
@@ -199,19 +221,21 @@ vi.mock("./supabaseClient", () => {
   const supabaseMock = {
     auth: {
       getSession: async () => ({
-        data: { session: { user: { id: "test-user", email: "test@example.com" } } },
-        error: null
+        data: {
+          session: { user: { id: "test-user", email: "test@example.com" } },
+        },
+        error: null,
       }),
       onAuthStateChange: (_event, _cb) => ({
-        data: { subscription: { unsubscribe: vi.fn() } }
+        data: { subscription: { unsubscribe: vi.fn() } },
       }),
-      signOut: vi.fn()
+      signOut: vi.fn(),
     },
     channel: () => {
       const subscription = {
         on: () => subscription,
         subscribe: () => subscription,
-        unsubscribe: vi.fn()
+        unsubscribe: vi.fn(),
       };
       return subscription;
     },
@@ -220,17 +244,17 @@ vi.mock("./supabaseClient", () => {
       const rows = tables[table];
       return {
         select: () => ({
-          order: async () => ({ data: [...rows], error: null })
+          order: async () => ({ data: [...rows], error: null }),
         }),
         insert: (payload) => {
           const inserted = payload.map((row) => ({
             id: nextId(),
             created_at: new Date().toISOString(),
-            ...row
+            ...row,
           }));
           tables[table].unshift(...inserted);
           return {
-            select: async () => ({ data: inserted, error: null })
+            select: async () => ({ data: inserted, error: null }),
           };
         },
         update: (updates) => ({
@@ -241,17 +265,17 @@ vi.mock("./supabaseClient", () => {
                 Object.assign(target, updates);
               }
               return { data: target ? [target] : [], error: null };
-            }
-          })
+            },
+          }),
         }),
         delete: () => ({
           eq: async (_column, value) => {
             tables[table] = tables[table].filter((row) => row.id !== value);
             return { error: null };
-          }
-        })
+          },
+        }),
       };
-    }
+    },
   };
 
   return {
@@ -262,12 +286,11 @@ vi.mock("./supabaseClient", () => {
       tables.todos = [];
       tables.categories = [];
       idCounter = 1;
-    }
+    },
   };
 });
 
 // Import after mocking so we can reset shared in-memory tables.
-// eslint-disable-next-line import/first
 import { __resetTables } from "./supabaseClient";
 
 const renderApp = () =>
@@ -276,18 +299,18 @@ const renderApp = () =>
       <SessionProvider>
         <App />
       </SessionProvider>
-    </MemoryRouter>
+    </MemoryRouter>,
   );
 
 const renderReadyApp = async () => {
   const utils = renderApp();
   await waitFor(() =>
-    expect(screen.queryByText(/loading/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/loading/i)).not.toBeInTheDocument(),
   );
   await waitFor(() =>
     expect(
-      screen.getByPlaceholderText("add a task to backlog")
-    ).toBeInTheDocument()
+      screen.getByPlaceholderText("add a task to backlog"),
+    ).toBeInTheDocument(),
   );
   return utils;
 };
@@ -305,8 +328,9 @@ describe("App", () => {
       .getAllByRole("button", { name: /^select/i })
       .filter((button) => button.textContent?.trim());
     const target =
-      dateButtons.find((button) => button.getAttribute("aria-pressed") !== "true") ??
-      dateButtons[0];
+      dateButtons.find(
+        (button) => button.getAttribute("aria-pressed") !== "true",
+      ) ?? dateButtons[0];
     if (!target) {
       throw new Error("No selectable calendar date found");
     }
@@ -327,17 +351,17 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: /^add$/i }));
 
     const priorityBadge = screen.getByRole("button", {
-      name: /priority medium/i
+      name: /priority medium/i,
     });
 
     fireEvent.click(priorityBadge);
     expect(
-      screen.getByRole("button", { name: /priority low/i })
+      screen.getByRole("button", { name: /priority low/i }),
     ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /priority low/i }));
     expect(
-      screen.getByRole("button", { name: /priority high/i })
+      screen.getByRole("button", { name: /priority high/i }),
     ).toBeInTheDocument();
   });
 
@@ -379,40 +403,40 @@ describe("App", () => {
       within(list)
         .getAllByRole("listitem")
         .map(
-          (item) => item.querySelector(".todo-label span")?.textContent ?? ""
+          (item) => item.querySelector(".todo-label span")?.textContent ?? "",
         );
 
     expect(getTitles()).toEqual([
       "medium priority task",
       "low priority task",
-      "high priority task"
+      "high priority task",
     ]);
 
     const focusGroup = screen.getByRole("group", {
-      name: /filter tasks by priority/i
+      name: /filter tasks by priority/i,
     });
-    const [highButton, mediumButton, lowButton] =
+    const [highButton, _mediumButton, lowButton] =
       within(focusGroup).getAllByRole("button");
 
     fireEvent.click(highButton);
     expect(getTitles()).toEqual([
       "high priority task",
       "medium priority task",
-      "low priority task"
+      "low priority task",
     ]);
 
     fireEvent.click(lowButton);
     expect(getTitles()).toEqual([
       "low priority task",
       "medium priority task",
-      "high priority task"
+      "high priority task",
     ]);
 
     fireEvent.click(lowButton);
     expect(getTitles()).toEqual([
       "medium priority task",
       "low priority task",
-      "high priority task"
+      "high priority task",
     ]);
   });
 
@@ -429,17 +453,19 @@ describe("App", () => {
     const checkbox = screen.getByRole("checkbox", { name: /archive me/i });
     fireEvent.click(checkbox);
 
-    const archiveButton = screen.getByRole("button", { name: /^archive$/i });
-    fireEvent.click(archiveButton);
+    const clearCompletedButton = screen.getByRole("button", {
+      name: /clear 1 completed task/i,
+    });
+    fireEvent.click(clearCompletedButton);
 
     await waitFor(() =>
       expect(
-        screen.queryByRole("checkbox", { name: /archive me/i })
-      ).not.toBeInTheDocument()
+        screen.queryByRole("checkbox", { name: /archive me/i }),
+      ).not.toBeInTheDocument(),
     );
 
     const showArchiveButton = await screen.findByRole("button", {
-      name: /show archived \(1\)/i
+      name: /show archived \(1\)/i,
     });
 
     expect(showArchiveButton).toBeEnabled();
@@ -456,11 +482,11 @@ describe("App", () => {
     expect(within(drawer).getAllByText("archive me")).toHaveLength(1);
 
     expect(
-      within(drawer).queryByRole("button", { name: /priority/i })
+      within(drawer).queryByRole("button", { name: /priority/i }),
     ).toBeNull();
 
     const hideArchiveButton = screen.getByRole("button", {
-      name: /hide archived/i
+      name: /hide archived/i,
     });
     expect(hideArchiveButton).toBeInTheDocument();
 
@@ -469,23 +495,23 @@ describe("App", () => {
     await waitFor(() => expect(drawer).not.toHaveClass("open"));
 
     const reopenButton = screen.getByRole("button", {
-      name: /show archived \(1\)/i
+      name: /show archived \(1\)/i,
     });
     expect(reopenButton).toBeEnabled();
     fireEvent.click(reopenButton);
     expect(drawer).toHaveClass("open");
 
     const deleteArchivedButton = within(drawer).getByRole("button", {
-      name: /delete archived task archive me/i
+      name: /delete archived task archive me/i,
     });
     fireEvent.click(deleteArchivedButton);
 
     await waitFor(() =>
-      expect(document.getElementById("archive-drawer")).toBeNull()
+      expect(document.getElementById("archive-drawer")).toBeNull(),
     );
 
     const showArchivedEmptyButton = await screen.findByRole("button", {
-      name: /show archived \(0\)/i
+      name: /show archived \(0\)/i,
     });
     expect(showArchivedEmptyButton).toBeDisabled();
   });
@@ -511,7 +537,7 @@ describe("App", () => {
       throw new Error("Todo list item not found");
     }
     expect(
-      within(todoItem).getByText("work", { selector: ".category-tag" })
+      within(todoItem).getByText("work", { selector: ".category-tag" }),
     ).toBeInTheDocument();
   });
 
@@ -519,7 +545,7 @@ describe("App", () => {
     await renderReadyApp();
 
     fireEvent.click(
-      screen.getByRole("button", { name: /add a new category/i })
+      screen.getByRole("button", { name: /add a new category/i }),
     );
 
     const categoryInput = screen.getByPlaceholderText("add category name");
@@ -544,7 +570,7 @@ describe("App", () => {
       throw new Error("Todo list item not found");
     }
     expect(
-      within(todoItem).getByText("fitness", { selector: ".category-tag" })
+      within(todoItem).getByText("fitness", { selector: ".category-tag" }),
     ).toBeInTheDocument();
   });
 
@@ -566,20 +592,24 @@ describe("App", () => {
       throw new Error("Todo item not found");
     }
     expect(
-      within(todoItem).getByText("personal", { selector: ".category-tag" })
+      within(todoItem).getByText("personal", { selector: ".category-tag" }),
     ).toBeInTheDocument();
 
     fireEvent.contextMenu(personalChip);
 
+    // Inline confirmation strip appears — click through to delete
+    const confirmDeleteButton = await screen.findByRole("button", {
+      name: /^delete$/i,
+    });
+    fireEvent.click(confirmDeleteButton);
+
     await waitFor(() =>
-      expect(
-        screen.queryByRole("button", { name: /^personal$/i })
-      ).toBeNull()
+      expect(screen.queryByRole("button", { name: /^personal$/i })).toBeNull(),
     );
     expect(
       within(todoItem).queryByText("personal", {
-        selector: ".category-tag"
-      })
+        selector: ".category-tag",
+      }),
     ).toBeNull();
 
     confirmSpy.mockRestore();

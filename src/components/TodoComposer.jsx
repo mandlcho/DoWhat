@@ -13,18 +13,22 @@ function TodoComposer({
   dueHighlights,
   filter,
   onFilterChange,
+  searchQuery,
+  onSearchChange,
   viewMode,
   columns,
   priorityFocus,
   onPriorityFocus,
   priorityOptions,
+  composerPriority,
+  onComposerPriorityChange,
   categories,
   selectedCategories,
   onToggleCategory,
   onCreateCategory,
   onRemoveCategory,
   onCalendarHoverDueDate,
-  error = ""
+  error = "",
 }) {
   return (
     <section className="composer">
@@ -50,6 +54,29 @@ function TodoComposer({
             rows={2}
             className="composer-textarea"
           />
+          <div className="composer-priority-row">
+            <span className="composer-priority-label">priority</span>
+            <div
+              className="composer-priority-options"
+              role="group"
+              aria-label="set task priority"
+            >
+              {priorityOptions.map(({ value, label }) => {
+                const isActive = composerPriority === value;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    className={`composer-priority-button priority-${value}${isActive ? " active" : ""}`}
+                    onClick={() => onComposerPriorityChange(value)}
+                    aria-pressed={isActive}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
           <button type="submit" className="composer-submit-inline">
             add
           </button>
@@ -78,7 +105,7 @@ function TodoComposer({
         <div
           className={viewMode === "list" ? "filters" : "filters filters-hidden"}
           role="radiogroup"
-          aria-label="filter todos"
+          aria-label="filter tasks"
           aria-hidden={viewMode !== "list"}
         >
           {columns.map(({ key, label }) => (
@@ -96,6 +123,14 @@ function TodoComposer({
             </button>
           ))}
         </div>
+        <input
+          type="text"
+          className="search-input"
+          placeholder="search tasks..."
+          value={searchQuery}
+          onChange={(event) => onSearchChange(event.target.value)}
+          aria-label="search tasks"
+        />
         <div className="priority-focus-filter">
           <span>filter</span>
           <div
@@ -133,8 +168,8 @@ TodoComposer.propTypes = {
   priorityOptions: PropTypes.arrayOf(
     PropTypes.shape({
       value: PropTypes.string.isRequired,
-      label: PropTypes.string.isRequired
-    })
+      label: PropTypes.string.isRequired,
+    }),
   ).isRequired,
   onTitleChange: PropTypes.func.isRequired,
   onDescriptionChange: PropTypes.func.isRequired,
@@ -143,28 +178,32 @@ TodoComposer.propTypes = {
   dueHighlights: PropTypes.object.isRequired,
   filter: PropTypes.string.isRequired,
   onFilterChange: PropTypes.func.isRequired,
+  searchQuery: PropTypes.string.isRequired,
+  onSearchChange: PropTypes.func.isRequired,
   viewMode: PropTypes.oneOf(["list", "card"]).isRequired,
   columns: PropTypes.arrayOf(
     PropTypes.shape({
       key: PropTypes.string.isRequired,
-      label: PropTypes.string.isRequired
-    })
+      label: PropTypes.string.isRequired,
+    }),
   ).isRequired,
+  composerPriority: PropTypes.string.isRequired,
+  onComposerPriorityChange: PropTypes.func.isRequired,
   priorityFocus: PropTypes.string.isRequired,
   onPriorityFocus: PropTypes.func.isRequired,
   categories: PropTypes.arrayOf(
     PropTypes.shape({
       id: PropTypes.string.isRequired,
       label: PropTypes.string.isRequired,
-      color: PropTypes.string.isRequired
-    })
+      color: PropTypes.string.isRequired,
+    }),
   ).isRequired,
   selectedCategories: PropTypes.arrayOf(PropTypes.string).isRequired,
   onToggleCategory: PropTypes.func.isRequired,
   onCreateCategory: PropTypes.func.isRequired,
   onRemoveCategory: PropTypes.func.isRequired,
   onCalendarHoverDueDate: PropTypes.func,
-  error: PropTypes.string
+  error: PropTypes.string,
 };
 
 export default TodoComposer;

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 export function useBoardDragAndDrop({ isEnabled, columns, setTodos }) {
   const [draggingId, setDraggingId] = useState(null);
@@ -44,11 +44,11 @@ export function useBoardDragAndDrop({ isEnabled, columns, setTodos }) {
               completed: nextStatus === "completed",
               activatedAt:
                 nextStatus === "active"
-                  ? sourceTodo.activatedAt ?? timestamp
+                  ? (sourceTodo.activatedAt ?? timestamp)
                   : nextStatus === "completed"
-                  ? sourceTodo.activatedAt ?? timestamp
-                  : null,
-              completedAt: nextStatus === "completed" ? timestamp : null
+                    ? (sourceTodo.activatedAt ?? timestamp)
+                    : null,
+              completedAt: nextStatus === "completed" ? timestamp : null,
             }
           : sourceTodo;
 
@@ -81,22 +81,25 @@ export function useBoardDragAndDrop({ isEnabled, columns, setTodos }) {
 
         let insertionIndex = computeDefaultInsertion();
         if (targetId) {
-          const targetIndex = remaining.findIndex((todo) => todo.id === targetId);
+          const targetIndex = remaining.findIndex(
+            (todo) => todo.id === targetId,
+          );
           if (targetIndex !== -1) {
-            insertionIndex = position === "after" ? targetIndex + 1 : targetIndex;
+            insertionIndex =
+              position === "after" ? targetIndex + 1 : targetIndex;
           }
         }
 
         const next = [
           ...remaining.slice(0, insertionIndex),
           statusChanged ? updatedTodo : { ...updatedTodo },
-          ...remaining.slice(insertionIndex)
+          ...remaining.slice(insertionIndex),
         ];
 
         return next;
       });
     },
-    [columns, setTodos]
+    [columns, setTodos],
   );
 
   const handleDragStart = useCallback(
@@ -115,7 +118,7 @@ export function useBoardDragAndDrop({ isEnabled, columns, setTodos }) {
       setDragOverTodoId(todoId);
       setDragPosition("before");
     },
-    [isEnabled]
+    [isEnabled],
   );
 
   const handleDragOver = useCallback(
@@ -136,7 +139,7 @@ export function useBoardDragAndDrop({ isEnabled, columns, setTodos }) {
       setDragOverTodoId(todoId);
       setDragPosition(position);
     },
-    [isEnabled, draggingId]
+    [isEnabled, draggingId],
   );
 
   const handleDropOnTodo = useCallback(
@@ -153,7 +156,7 @@ export function useBoardDragAndDrop({ isEnabled, columns, setTodos }) {
       moveTodoInBoard(draggingId, columnKey, todoId, dragPosition);
       reset();
     },
-    [isEnabled, draggingId, dragPosition, moveTodoInBoard, reset]
+    [isEnabled, draggingId, dragPosition, moveTodoInBoard, reset],
   );
 
   const handleColumnDragOver = useCallback(
@@ -168,7 +171,7 @@ export function useBoardDragAndDrop({ isEnabled, columns, setTodos }) {
       setDragOverTodoId(null);
       setDragPosition("after");
     },
-    [isEnabled, draggingId]
+    [isEnabled, draggingId],
   );
 
   const handleColumnDrop = useCallback(
@@ -181,7 +184,7 @@ export function useBoardDragAndDrop({ isEnabled, columns, setTodos }) {
       moveTodoInBoard(draggingId, columnKey, null, "after");
       reset();
     },
-    [isEnabled, draggingId, moveTodoInBoard, reset]
+    [isEnabled, draggingId, moveTodoInBoard, reset],
   );
 
   const handleDragEnd = useCallback(() => {
@@ -208,7 +211,7 @@ export function useBoardDragAndDrop({ isEnabled, columns, setTodos }) {
             onDragOver: (event) => handleDragOver(event, todoId, columnKey),
             onDrop: (event) => handleDropOnTodo(event, todoId, columnKey),
             onDragEnd: handleDragEnd,
-            "aria-grabbed": isDragging || undefined
+            "aria-grabbed": isDragging || undefined,
           }
         : { draggable: false };
 
@@ -223,8 +226,8 @@ export function useBoardDragAndDrop({ isEnabled, columns, setTodos }) {
       handleDragStart,
       handleDragOver,
       handleDropOnTodo,
-      handleDragEnd
-    ]
+      handleDragEnd,
+    ],
   );
 
   const getColumnProps = useCallback(
@@ -237,7 +240,7 @@ export function useBoardDragAndDrop({ isEnabled, columns, setTodos }) {
       const columnProps = isEnabled
         ? {
             onDragOver: (event) => handleColumnDragOver(event, columnKey),
-            onDrop: (event) => handleColumnDrop(event, columnKey)
+            onDrop: (event) => handleColumnDrop(event, columnKey),
           }
         : {};
 
@@ -249,14 +252,13 @@ export function useBoardDragAndDrop({ isEnabled, columns, setTodos }) {
       dragOverTodoId,
       draggingId,
       handleColumnDragOver,
-      handleColumnDrop
-    ]
+      handleColumnDrop,
+    ],
   );
 
   return {
     getCardProps,
     getColumnProps,
-    reset
+    reset,
   };
 }
-

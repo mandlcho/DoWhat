@@ -1,8 +1,15 @@
 import { useState } from "react";
 import PropTypes from "prop-types";
 import { TODO_PRIORITIES, DEFAULT_PRIORITY } from "../hooks/useTodos";
-import { formatTimestamp, formatDate, getNextPriority } from "../utils/todoFormatting";
-import { CATEGORY_DRAG_TYPE, ARCHIVED_TODO_DRAG_TYPE } from "../utils/dragTypes";
+import {
+  formatTimestamp,
+  formatDate,
+  getNextPriority,
+} from "../utils/todoFormatting";
+import {
+  CATEGORY_DRAG_TYPE,
+  ARCHIVED_TODO_DRAG_TYPE,
+} from "../utils/dragTypes";
 
 const hasCategoryPayload = (event) => {
   if (!event || !event.dataTransfer) {
@@ -45,9 +52,10 @@ function TodoListItem({
   onAssignCategory = null,
   onRemoveCategory = null,
   onRestoreArchived = null,
-  listStatus = "backlog"
+  listStatus = "backlog",
 }) {
   const [isCategoryDropTarget, setIsCategoryDropTarget] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
   const createdLabel = formatTimestamp(todo.createdAt);
   const activatedLabel = todo.activatedAt
     ? formatTimestamp(todo.activatedAt)
@@ -56,11 +64,11 @@ function TodoListItem({
     ? formatTimestamp(todo.completedAt)
     : null;
   const dueLabel = todo.dueDate ? formatDate(todo.dueDate) : null;
-  const dueIso = typeof todo.dueDate === "string" ? todo.dueDate.slice(0, 10) : "";
+  const dueIso =
+    typeof todo.dueDate === "string" ? todo.dueDate.slice(0, 10) : "";
   const hasCalendarFocus =
     typeof calendarFocusDate === "string" && calendarFocusDate.length > 0;
-  const matchesCalendarFocus =
-    hasCalendarFocus && dueIso === calendarFocusDate;
+  const matchesCalendarFocus = hasCalendarFocus && dueIso === calendarFocusDate;
   const isCalendarMuted = hasCalendarFocus && !matchesCalendarFocus;
 
   const currentPriority = TODO_PRIORITIES.includes(todo.priority)
@@ -73,7 +81,7 @@ function TodoListItem({
         .map((categoryId) =>
           categoryLookup && typeof categoryLookup.get === "function"
             ? categoryLookup.get(categoryId)
-            : null
+            : null,
         )
         .filter(Boolean)
     : [];
@@ -92,13 +100,6 @@ function TodoListItem({
     }
     event.preventDefault();
     event.stopPropagation();
-    const label = category.label ?? "this label";
-    const shouldRemove = window.confirm(
-      `remove label "${label}" from "${todo.title}"?`
-    );
-    if (!shouldRemove) {
-      return;
-    }
     onRemoveCategory(todo.id, category.id);
   };
 
@@ -155,7 +156,7 @@ function TodoListItem({
         onRestoreArchived(archivedId, {
           status: listStatus,
           referenceId: todo.id,
-          position: dropPosition
+          position: dropPosition,
         });
       }
       return;
@@ -180,15 +181,15 @@ function TodoListItem({
     onDragEnter: handleDragEnter,
     onDragOver: handleDragOver,
     onDragLeave: handleDragLeave,
-    onDrop: handleDrop
+    onDrop: handleDrop,
   };
 
   const syncLabel =
     syncState === "syncing"
       ? "syncing…"
       : syncState === "failed"
-      ? "sync failed"
-      : "synced";
+        ? "sync failed"
+        : "synced";
 
   const handleRetryClick = () => {
     if (syncState === "failed" && typeof onRetrySync === "function") {
@@ -243,22 +244,24 @@ function TodoListItem({
           >
             {currentPriority}
           </button>
-          <button
-            type="button"
-            className={`todo-sync-status status-${syncState}${
-              syncState === "failed" ? " todo-sync-retry" : ""
-            }`}
-            onClick={handleRetryClick}
-            aria-label={
-              syncState === "failed"
-                ? `sync failed for ${todo.title}. click to retry.${syncError ? ` reason: ${syncError}` : ""}`
-                : `sync status: ${syncLabel}`
-            }
-            title={syncError || undefined}
-            disabled={syncState !== "failed"}
-          >
-            {syncLabel}
-          </button>
+          {syncState !== "synced" && (
+            <button
+              type="button"
+              className={`todo-sync-status status-${syncState}${
+                syncState === "failed" ? " todo-sync-retry" : ""
+              }`}
+              onClick={handleRetryClick}
+              aria-label={
+                syncState === "failed"
+                  ? `sync failed for ${todo.title}. click to retry.${syncError ? ` reason: ${syncError}` : ""}`
+                  : `sync status: ${syncLabel}`
+              }
+              title={syncError || undefined}
+              disabled={syncState !== "failed"}
+            >
+              {syncLabel}
+            </button>
+          )}
           <button
             type="button"
             className="todo-dismiss"
@@ -266,16 +269,20 @@ function TodoListItem({
             aria-label={
               todo.status === "active"
                 ? `return ${todo.title} to backlog`
-                : todo.status === "completed" || todo.completed || todo.is_complete
-                ? `archive ${todo.title}`
-                : `delete ${todo.title}`
+                : todo.status === "completed" ||
+                    todo.completed ||
+                    todo.is_complete
+                  ? `archive ${todo.title}`
+                  : `delete ${todo.title}`
             }
             title={
               todo.status === "active"
                 ? "Move back to backlog"
-                : todo.status === "completed" || todo.completed || todo.is_complete
-                ? "Archive completed task"
-                : "Delete task"
+                : todo.status === "completed" ||
+                    todo.completed ||
+                    todo.is_complete
+                  ? "Archive completed task"
+                  : "Delete task"
             }
           >
             <svg
@@ -295,7 +302,9 @@ function TodoListItem({
           </button>
         </div>
       </div>
-      {todo.description && <p className="todo-description">{todo.description}</p>}
+      {todo.description && (
+        <p className="todo-description">{todo.description}</p>
+      )}
       <div className="todo-footer">
         <div className="todo-meta">
           {todoCategories.length > 0 ? (
@@ -305,18 +314,56 @@ function TodoListItem({
                   key={category.id}
                   className="category-tag"
                   style={{ "--tag-color": category.color }}
-                  onContextMenu={(event) => handleCategoryContextMenu(event, category)}
+                  onContextMenu={(event) =>
+                    handleCategoryContextMenu(event, category)
+                  }
                   title="right click to remove label"
                 >
                   {category.label}
+                  <button
+                    type="button"
+                    className="category-tag-remove"
+                    onClick={() =>
+                      onRemoveCategory && onRemoveCategory(todo.id, category.id)
+                    }
+                    aria-label={`remove ${category.label} from ${todo.title}`}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="0.65em"
+                      height="0.65em"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                    >
+                      <line x1="11" y1="5" x2="5" y2="11"></line>
+                      <line x1="5" y1="5" x2="11" y2="11"></line>
+                    </svg>
+                  </button>
                 </span>
               ))}
             </div>
           ) : null}
-          <span>created: {createdLabel || "unknown"}</span>
-          <span>activated: {activatedLabel ? activatedLabel : "not yet"}</span>
-          {dueLabel && <span>due: {dueLabel}</span>}
-          {completedLabel && <span>done: {completedLabel}</span>}
+          <div className="todo-meta-row">
+            {dueLabel && <span>due: {dueLabel}</span>}
+            <button
+              type="button"
+              className="todo-details-toggle"
+              onClick={() => setShowDetails((prev) => !prev)}
+              aria-expanded={showDetails}
+            >
+              {showDetails ? "less" : "details"}
+            </button>
+          </div>
+          {showDetails && (
+            <div className="todo-meta-details">
+              <span>created: {createdLabel || "unknown"}</span>
+              {activatedLabel && <span>activated: {activatedLabel}</span>}
+              {completedLabel && <span>done: {completedLabel}</span>}
+            </div>
+          )}
         </div>
         {footerActions}
       </div>
@@ -336,7 +383,7 @@ TodoListItem.propTypes = {
     activatedAt: PropTypes.string,
     completedAt: PropTypes.string,
     dueDate: PropTypes.string,
-    categories: PropTypes.arrayOf(PropTypes.string)
+    categories: PropTypes.arrayOf(PropTypes.string),
   }).isRequired,
   onToggle: PropTypes.func.isRequired,
   onMoveToActive: PropTypes.func.isRequired,
@@ -346,14 +393,14 @@ TodoListItem.propTypes = {
   dragState: PropTypes.shape({
     dragProps: PropTypes.object,
     isDragging: PropTypes.bool,
-    dropPosition: PropTypes.oneOf(["before", "after", null])
+    dropPosition: PropTypes.oneOf(["before", "after", null]),
   }),
   categoryLookup: PropTypes.instanceOf(Map),
   calendarFocusDate: PropTypes.string,
   onAssignCategory: PropTypes.func,
   onRemoveCategory: PropTypes.func,
   onRestoreArchived: PropTypes.func,
-  listStatus: PropTypes.string
+  listStatus: PropTypes.string,
 };
 
 export default TodoListItem;

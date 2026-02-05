@@ -3,7 +3,12 @@ import ThemeToggle from "./ThemeToggle";
 import { useSession } from "../hooks/useSession";
 import { supabase } from "../supabaseClient";
 
-function AppHeader({ viewMode, onViewModeChange, themeMode, onThemeModeChange }) {
+function AppHeader({
+  viewMode,
+  onViewModeChange,
+  themeMode,
+  onThemeModeChange,
+}) {
   const { session } = useSession();
 
   return (
@@ -19,7 +24,9 @@ function AppHeader({ viewMode, onViewModeChange, themeMode, onThemeModeChange })
           <div className="view-toggles" role="group" aria-label="view mode">
             <button
               type="button"
-              className={viewMode === "list" ? "view-option active" : "view-option"}
+              className={
+                viewMode === "list" ? "view-option active" : "view-option"
+              }
               onClick={() => onViewModeChange("list")}
               aria-pressed={viewMode === "list"}
             >
@@ -27,11 +34,13 @@ function AppHeader({ viewMode, onViewModeChange, themeMode, onThemeModeChange })
             </button>
             <button
               type="button"
-              className={viewMode === "card" ? "view-option active" : "view-option"}
+              className={
+                viewMode === "card" ? "view-option active" : "view-option"
+              }
               onClick={() => onViewModeChange("card")}
               aria-pressed={viewMode === "card"}
             >
-              card
+              board
             </button>
           </div>
         </div>
@@ -45,8 +54,7 @@ AppHeader.propTypes = {
   viewMode: PropTypes.oneOf(["list", "card"]).isRequired,
   onViewModeChange: PropTypes.func.isRequired,
   themeMode: PropTypes.oneOf(["light", "dark", "system"]).isRequired,
-  onThemeModeChange: PropTypes.func.isRequired
+  onThemeModeChange: PropTypes.func.isRequired,
 };
 
 export default AppHeader;
-

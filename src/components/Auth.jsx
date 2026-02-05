@@ -29,7 +29,7 @@ export default function Auth() {
         ? await supabase.auth.signUp({
             email,
             password,
-            options: { emailRedirectTo: getRedirectUrl() }
+            options: { emailRedirectTo: getRedirectUrl() },
           })
         : await supabase.auth.signInWithPassword({ email, password });
 
@@ -40,10 +40,12 @@ export default function Auth() {
       setMessage(
         isSignup
           ? "Signup successful! Check your email to confirm your account."
-          : "Logged in successfully."
+          : "Logged in successfully.",
       );
     } catch (error) {
-      setMessage(error?.error_description || error?.message || "Something went wrong.");
+      setMessage(
+        error?.error_description || error?.message || "Something went wrong.",
+      );
     } finally {
       setLoading(false);
     }
@@ -78,13 +80,13 @@ export default function Auth() {
             <input
               id="password"
               className="auth-input"
-            type={showPassword ? "text" : "password"}
-            autoComplete="current-password"
-            placeholder="••••••••"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            required
-          />
+              type={showPassword ? "text" : "password"}
+              autoComplete="current-password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              required
+            />
             <button
               type="button"
               className="auth-toggle-password"
@@ -115,6 +117,29 @@ export default function Auth() {
               create account
             </button>
           </div>
+          <button
+            type="button"
+            className="auth-reset-link"
+            disabled={loading || !email}
+            onClick={async () => {
+              setMessage("");
+              setLoading(true);
+              try {
+                const { error: resetError } =
+                  await supabase.auth.resetPasswordForEmail(email, {
+                    redirectTo: (getRedirectUrl() || "") + "/#/reset",
+                  });
+                if (resetError) throw resetError;
+                setMessage("check your email for a password reset link.");
+              } catch (err) {
+                setMessage(err?.message || "something went wrong.");
+              } finally {
+                setLoading(false);
+              }
+            }}
+          >
+            forgot password?
+          </button>
         </form>
       </div>
     </div>

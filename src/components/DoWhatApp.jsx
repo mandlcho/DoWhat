@@ -16,29 +16,28 @@ import "../App.css";
 const FILTERS = {
   backlog: (todo) => todo.status === "backlog",
   active: (todo) => todo.status === "active",
-  completed: (todo) => todo.status === "completed"
+  completed: (todo) => todo.status === "completed",
 };
 
 const CARD_COLUMNS = [
   { key: "backlog", label: "backlog" },
   { key: "active", label: "active" },
-  { key: "completed", label: "done" }
+  { key: "completed", label: "done" },
 ];
 
 function DoWhatApp() {
-  const { 
-    todos, 
-    setTodos, 
-    stats, 
-    archivedTodos, 
-    setArchivedTodos, 
+  const {
+    todos,
+    setTodos,
+    stats,
+    archivedTodos,
     syncStateById,
     syncErrorById,
-    addTodo, 
-    updateTodo, 
+    addTodo,
+    updateTodo,
     retryTodoSync,
     deleteTodo,
-    loading: todosLoading 
+    loading: todosLoading,
   } = useTodos();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -46,20 +45,23 @@ function DoWhatApp() {
   const [priorityFocus, setPriorityFocus] = useState("");
   const [calendarHoverDate, setCalendarHoverDate] = useState("");
   const [filter, setFilter] = useState("backlog");
+  const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState("list");
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
+  const [composerPriority, setComposerPriority] = useState(DEFAULT_PRIORITY);
   const [composerError, setComposerError] = useState("");
+  const [pendingDeleteId, setPendingDeleteId] = useState(null);
   const [selectedCategories, setSelectedCategories] = useState([]);
   const archiveDrawerRef = useRef(null);
   const archiveToggleRef = useRef(null);
   const isListView = viewMode === "list";
   const isCardView = viewMode === "card";
   const { theme, setTheme } = useThemePreference();
-  const { 
-    categories, 
-    addCategory, 
-    removeCategory, 
-    loading: categoriesLoading 
+  const {
+    categories,
+    addCategory,
+    removeCategory,
+    loading: categoriesLoading,
   } = useCategories();
 
   const categoryLookup = useMemo(() => {
@@ -119,16 +121,16 @@ function DoWhatApp() {
   }, []);
 
   const handleCreateCategory = useCallback(
-    async (label) => {
-      const created = await addCategory(label);
+    async (label, color) => {
+      const created = await addCategory(label, color);
       if (created) {
         setSelectedCategories((prev) =>
-          prev.includes(created.id) ? prev : [...prev, created.id]
+          prev.includes(created.id) ? prev : [...prev, created.id],
         );
       }
       return created;
     },
-    [addCategory]
+    [addCategory],
   );
 
   const handleRemoveCategory = useCallback(
@@ -137,12 +139,22 @@ function DoWhatApp() {
         return;
       }
       await removeCategory(categoryId);
-      setSelectedCategories((prev) =>
-        prev.filter((id) => id !== categoryId)
+      setSelectedCategories((prev) => prev.filter((id) => id !== categoryId));
+      // Strip orphaned category ID from all todos that reference it
+      const affected = todos.filter(
+        (todo) =>
+          Array.isArray(todo.categories) &&
+          todo.categories.includes(categoryId),
       );
-      // The backend will handle cascades or we'll need to update todos separately
+      await Promise.all(
+        affected.map((todo) =>
+          updateTodo(todo.id, {
+            categories: todo.categories.filter((id) => id !== categoryId),
+          }),
+        ),
+      );
     },
-    [removeCategory]
+    [removeCategory, todos, updateTodo],
   );
 
   const handleAssignCategory = useCallback(
@@ -150,7 +162,7 @@ function DoWhatApp() {
       if (!todoId || !categoryId) {
         return;
       }
-      const todo = todos.find(t => t.id === todoId);
+      const todo = todos.find((t) => t.id === todoId);
       if (!todo) return;
 
       const currentCategories = Array.isArray(todo.categories)
@@ -159,39 +171,32 @@ function DoWhatApp() {
       if (currentCategories.includes(categoryId)) {
         return;
       }
-      
-      await updateTodo(todoId, { categories: [...currentCategories, categoryId] });
+
+      await updateTodo(todoId, {
+        categories: [...currentCategories, categoryId],
+      });
     },
-    [todos, updateTodo]
+    [todos, updateTodo],
   );
 
   const archiveCompleted = useCallback(async () => {
     const completedTodos = todos.filter(
-      (todo) => todo.status === "completed" || todo.completed || todo.is_complete
+      (todo) =>
+        todo.status === "completed" || todo.completed || todo.is_complete,
     );
 
     if (completedTodos.length === 0) {
       return;
     }
 
-    // Show confirmation since archive isn't supported (will delete permanently)
-    const confirmMessage = completedTodos.length === 1
-      ? `Delete "${completedTodos[0].title}"?\n\nNote: Archive is not available, this will permanently delete the task.`
-      : `Delete ${completedTodos.length} completed tasks?\n\nNote: Archive is not available, this will permanently delete them.`;
-
-    const confirmed = window.confirm(confirmMessage);
-    if (!confirmed) {
-      return;
-    }
-
-    console.log('[archiveCompleted] Deleting', completedTodos.length, 'completed todos');
+    const archiveTimestamp = new Date().toISOString();
 
     await Promise.all(
-      completedTodos.map(todo => deleteTodo(todo.id))
+      completedTodos.map((todo) =>
+        updateTodo(todo.id, { archivedAt: archiveTimestamp }),
+      ),
     );
-
-    console.log('[archiveCompleted] Deleted', completedTodos.length, 'completed todos');
-  }, [todos, deleteTodo]);
+  }, [todos, updateTodo]);
 
   const reorderByPriorityFocus = useCallback(
     (items) => {
@@ -209,22 +214,35 @@ function DoWhatApp() {
       });
       return prioritized.length ? [...prioritized, ...others] : items;
     },
-    [priorityFocus]
+    [priorityFocus],
+  );
+
+  const searchFilter = useCallback(
+    (items) => {
+      if (!searchQuery.trim()) return items;
+      const q = searchQuery.trim().toLowerCase();
+      return items.filter(
+        (todo) =>
+          (todo.title && todo.title.toLowerCase().includes(q)) ||
+          (todo.description && todo.description.toLowerCase().includes(q)),
+      );
+    },
+    [searchQuery],
   );
 
   const filteredTodos = useMemo(() => {
     const list = todos.filter(FILTERS[filter]);
-    return reorderByPriorityFocus(list);
-  }, [todos, filter, reorderByPriorityFocus]);
+    return reorderByPriorityFocus(searchFilter(list));
+  }, [todos, filter, reorderByPriorityFocus, searchFilter]);
 
   const boardColumns = useMemo(
     () =>
       CARD_COLUMNS.map(({ key, label }) => ({
         key,
         label,
-        todos: reorderByPriorityFocus(todos.filter(FILTERS[key]))
+        todos: reorderByPriorityFocus(searchFilter(todos.filter(FILTERS[key]))),
       })),
-    [todos, reorderByPriorityFocus]
+    [todos, reorderByPriorityFocus, searchFilter],
   );
 
   const sortedArchivedTodos = useMemo(() => {
@@ -232,8 +250,12 @@ function DoWhatApp() {
       return [];
     }
     return [...archivedTodos].sort((a, b) => {
-      const aTime = new Date(a.archivedAt ?? a.completedAt ?? a.createdAt).getTime();
-      const bTime = new Date(b.archivedAt ?? b.completedAt ?? b.createdAt).getTime();
+      const aTime = new Date(
+        a.archivedAt ?? a.completedAt ?? a.createdAt,
+      ).getTime();
+      const bTime = new Date(
+        b.archivedAt ?? b.completedAt ?? b.createdAt,
+      ).getTime();
       return bTime - aTime;
     });
   }, [archivedTodos]);
@@ -241,18 +263,18 @@ function DoWhatApp() {
   const listDragAndDrop = useListDragAndDrop({
     isEnabled: isListView,
     todos: filteredTodos,
-    setTodos
+    setTodos,
   });
 
   const boardDragAndDrop = useBoardDragAndDrop({
     isEnabled: isCardView,
     columns: CARD_COLUMNS,
-    setTodos: (fn) => setTodos(fn(todos))
+    setTodos: (fn) => setTodos(fn(todos)),
   });
 
   const dueDateHighlights = useMemo(() => {
     const priorityOrder = new Map(
-      TODO_PRIORITIES.map((priority, index) => [priority, index])
+      TODO_PRIORITIES.map((priority, index) => [priority, index]),
     );
     const map = new Map();
 
@@ -280,10 +302,10 @@ function DoWhatApp() {
         const ordered = [...priorities].sort(
           (a, b) =>
             (priorityOrder.get(a) ?? Number.POSITIVE_INFINITY) -
-            (priorityOrder.get(b) ?? Number.POSITIVE_INFINITY)
+            (priorityOrder.get(b) ?? Number.POSITIVE_INFINITY),
         );
         return [iso, { count: ordered.length, priorities: ordered }];
-      })
+      }),
     );
   }, [todos]);
 
@@ -302,77 +324,85 @@ function DoWhatApp() {
     async (event) => {
       event.preventDefault();
       if (!title.trim()) return;
-      if (!dueDate) {
-        setComposerError("pick a due date before adding the task.");
-        return;
-      }
-
       const nextTodo = {
         title: title.trim(),
         description: description.trim(),
-        priority: DEFAULT_PRIORITY,
+        priority: composerPriority,
         status: "backlog",
         is_complete: false,
         due_date: dueDate ? dueDate.trim() : null,
-        categories: [...selectedCategories]
+        categories: [...selectedCategories],
       };
 
       const result = await addTodo(nextTodo);
       if (!result?.success || !result?.todo) {
         setComposerError(
           result?.error?.message ||
-            "unable to save that task right now. please try again."
+            "unable to save that task right now. please try again.",
         );
         return;
       }
-      
+
       setTitle("");
       setDescription("");
       setDueDate("");
+      setComposerPriority(DEFAULT_PRIORITY);
       setSelectedCategories([]);
       setComposerError("");
     },
-    [title, description, dueDate, addTodo, selectedCategories]
+    [
+      title,
+      description,
+      dueDate,
+      composerPriority,
+      addTodo,
+      selectedCategories,
+    ],
   );
 
   const updateTodoStatus = useCallback(
     async (id, status) => {
-      const todo = todos.find(t => t.id === id);
+      const todo = todos.find((t) => t.id === id);
       if (!todo) {
-        console.error('[updateTodoStatus] Todo not found:', id);
+        console.error("[updateTodoStatus] Todo not found:", id);
         return;
       }
 
       const updates = {
         status,
-        is_complete: status === "completed"
+        is_complete: status === "completed",
       };
 
-      console.log('[updateTodoStatus] Updating status:', { id, currentStatus: todo.status, newStatus: status, updates });
+      console.log("[updateTodoStatus] Updating status:", {
+        id,
+        currentStatus: todo.status,
+        newStatus: status,
+        updates,
+      });
       await updateTodo(id, updates);
     },
-    [todos, updateTodo]
+    [todos, updateTodo],
   );
 
   const toggleTodo = useCallback(
     (id, checked) => {
       updateTodoStatus(id, checked ? "completed" : "active");
     },
-    [updateTodoStatus]
+    [updateTodoStatus],
   );
 
   const moveToBacklog = useCallback(
     (id) => {
       updateTodoStatus(id, "backlog");
     },
-    [updateTodoStatus]
+    [updateTodoStatus],
   );
 
   const moveToActive = useCallback(
     (id) => {
       updateTodoStatus(id, "active");
     },
-    [updateTodoStatus]
+    [updateTodoStatus],
   );
 
   const updateTodoPriority = useCallback(
@@ -382,14 +412,14 @@ function DoWhatApp() {
       }
       await updateTodo(id, { priority: value });
     },
-    [updateTodo]
+    [updateTodo],
   );
 
   const removeTodo = useCallback(
     async (id) => {
       await deleteTodo(id);
     },
-    [deleteTodo]
+    [deleteTodo],
   );
 
   const handleDismiss = useCallback(
@@ -407,34 +437,28 @@ function DoWhatApp() {
         return;
       }
 
-      // Backlog task: Ask for confirmation before permanent deletion
-      if (todo.status === "backlog") {
-        const confirmDelete = window.confirm(
-          `Permanently delete "${todo.title}"?\n\nThis cannot be undone.`
-        );
-        if (!confirmDelete) {
-          return;
-        }
-        removeTodo(todo.id);
-        return;
-      }
-
-      // Fallback: Delete with confirmation
-      const confirmDelete = window.confirm(
-        `Permanently delete "${todo.title}"?\n\nThis cannot be undone.`
-      );
-      if (confirmDelete) {
-        removeTodo(todo.id);
-      }
+      // Backlog task (or fallback): show inline confirmation
+      setPendingDeleteId(todo.id);
     },
-    [moveToBacklog, removeTodo, updateTodo]
+    [moveToBacklog, updateTodo],
   );
+
+  const confirmDelete = useCallback(async () => {
+    if (pendingDeleteId) {
+      await removeTodo(pendingDeleteId);
+      setPendingDeleteId(null);
+    }
+  }, [pendingDeleteId, removeTodo]);
+
+  const cancelDelete = useCallback(() => {
+    setPendingDeleteId(null);
+  }, []);
 
   const removeArchivedTodo = useCallback(
     async (id) => {
       await deleteTodo(id);
     },
-    [deleteTodo]
+    [deleteTodo],
   );
 
   const handleRemoveCategoryFromTodo = useCallback(
@@ -442,13 +466,15 @@ function DoWhatApp() {
       if (!todoId || !categoryId) {
         return;
       }
-      const todo = todos.find(t => t.id === todoId);
+      const todo = todos.find((t) => t.id === todoId);
       if (!todo || !Array.isArray(todo.categories)) return;
 
-      const nextCategories = todo.categories.filter((category) => category !== categoryId);
+      const nextCategories = todo.categories.filter(
+        (category) => category !== categoryId,
+      );
       await updateTodo(todoId, { categories: nextCategories });
     },
-    [todos, updateTodo]
+    [todos, updateTodo],
   );
 
   const handleRemoveCategoryFromArchived = useCallback(
@@ -456,13 +482,15 @@ function DoWhatApp() {
       if (!todoId || !categoryId) {
         return;
       }
-      const todo = archivedTodos.find(t => t.id === todoId);
+      const todo = archivedTodos.find((t) => t.id === todoId);
       if (!todo || !Array.isArray(todo.categories)) return;
 
-      const nextCategories = todo.categories.filter((category) => category !== categoryId);
+      const nextCategories = todo.categories.filter(
+        (category) => category !== categoryId,
+      );
       await updateTodo(todoId, { categories: nextCategories });
     },
-    [archivedTodos, updateTodo]
+    [archivedTodos, updateTodo],
   );
 
   const restoreArchivedTodo = useCallback(
@@ -480,7 +508,7 @@ function DoWhatApp() {
 
       await updateTodo(todoId, updates);
     },
-    [updateTodo]
+    [updateTodo],
   );
 
   const todoActions = useMemo(
@@ -492,7 +520,7 @@ function DoWhatApp() {
       handleDismiss,
       syncStateById,
       syncErrorById,
-      retryTodoSync
+      retryTodoSync,
     }),
     [
       toggleTodo,
@@ -502,8 +530,8 @@ function DoWhatApp() {
       handleDismiss,
       syncStateById,
       syncErrorById,
-      retryTodoSync
-    ]
+      retryTodoSync,
+    ],
   );
 
   const handleToggleArchive = useCallback(() => {
@@ -511,7 +539,17 @@ function DoWhatApp() {
   }, []);
 
   if (todosLoading || categoriesLoading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="loading-shell">
+        <div className="loading-skeleton">
+          <div className="skeleton-line skeleton-line--title" />
+          <div className="skeleton-line skeleton-line--input" />
+          <div className="skeleton-line skeleton-line--item" />
+          <div className="skeleton-line skeleton-line--item skeleton-line--short" />
+          <div className="skeleton-line skeleton-line--item" />
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -528,6 +566,8 @@ function DoWhatApp() {
         description={description}
         dueDate={dueDate}
         priorityOptions={PRIORITY_OPTIONS}
+        composerPriority={composerPriority}
+        onComposerPriorityChange={setComposerPriority}
         onTitleChange={setTitle}
         onDescriptionChange={setDescription}
         onDueDateChange={handleDueDateChange}
@@ -535,6 +575,8 @@ function DoWhatApp() {
         dueHighlights={dueDateHighlights}
         filter={filter}
         onFilterChange={setFilter}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
         viewMode={viewMode}
         columns={CARD_COLUMNS}
         priorityFocus={priorityFocus}
@@ -554,27 +596,45 @@ function DoWhatApp() {
       >
         {viewMode === "card" ? (
           todos.length === 0 ? (
-            <p className="empty-state">no todos yet. add one above.</p>
+            <div className="empty-state empty-state-onboard">
+              <p className="empty-state-title">no tasks yet</p>
+              <p className="empty-state-hint">
+                type a task above and hit add. use the calendar to set a due
+                date, and pick categories to organise as you go.
+              </p>
+            </div>
           ) : (
-          <TodoBoard
-            columns={boardColumns}
-            actions={todoActions}
-            dragAndDrop={boardDragAndDrop}
-            categoryLookup={categoryLookup}
-            calendarFocusDate={calendarHoverDate}
-            onAssignCategory={handleAssignCategory}
-            onRemoveCategory={handleRemoveCategoryFromTodo}
-            onRestoreArchived={restoreArchivedTodo}
-          />
+            <TodoBoard
+              columns={boardColumns}
+              actions={todoActions}
+              dragAndDrop={boardDragAndDrop}
+              categoryLookup={categoryLookup}
+              calendarFocusDate={calendarHoverDate}
+              onAssignCategory={handleAssignCategory}
+              onRemoveCategory={handleRemoveCategoryFromTodo}
+              onRestoreArchived={restoreArchivedTodo}
+            />
           )
         ) : filteredTodos.length === 0 ? (
-          <p className="empty-state">
-            {filter === "active"
-              ? "no tasks are active."
-              : filter === "completed"
-              ? "no tasks done yet."
-              : "no todos yet. add one above."}
-          </p>
+          <div className="empty-state empty-state-onboard">
+            {todos.length === 0 ? (
+              <>
+                <p className="empty-state-title">no tasks yet</p>
+                <p className="empty-state-hint">
+                  type a task above and hit add. use the calendar to set a due
+                  date, and pick categories to organise as you go.
+                </p>
+              </>
+            ) : (
+              <p className="empty-state-title">
+                {filter === "active"
+                  ? "no active tasks"
+                  : filter === "completed"
+                    ? "nothing done yet"
+                    : "backlog is empty"}
+              </p>
+            )}
+          </div>
         ) : (
           <TodoList
             todos={filteredTodos}
@@ -590,6 +650,35 @@ function DoWhatApp() {
         )}
       </section>
 
+      {pendingDeleteId &&
+        (() => {
+          const pendingTodo = todos.find((t) => t.id === pendingDeleteId);
+          return (
+            <div className="confirm-bar" role="alert">
+              <span>
+                delete &ldquo;{pendingTodo?.title ?? "this task"}&rdquo;? this
+                cannot be undone.
+              </span>
+              <div className="confirm-bar-actions">
+                <button
+                  type="button"
+                  className="confirm-bar-cancel"
+                  onClick={cancelDelete}
+                >
+                  cancel
+                </button>
+                <button
+                  type="button"
+                  className="confirm-bar-confirm"
+                  onClick={confirmDelete}
+                >
+                  delete
+                </button>
+              </div>
+            </div>
+          );
+        })()}
+
       <AppFooter
         stats={stats}
         onArchiveCompleted={archiveCompleted}
@@ -604,6 +693,7 @@ function DoWhatApp() {
         isOpen={isArchiveOpen}
         drawerRef={archiveDrawerRef}
         onRemove={removeArchivedTodo}
+        onClose={handleToggleArchive}
         categoryLookup={categoryLookup}
         onRemoveCategory={handleRemoveCategoryFromArchived}
       />
