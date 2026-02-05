@@ -1,7 +1,6 @@
 import PropTypes from "prop-types";
 import ThemeToggle from "./ThemeToggle";
-import { useSession } from "../hooks/useSession";
-import { supabase } from "../supabaseClient";
+import { useVault } from "../hooks/useVault";
 
 function AppHeader({
   viewMode,
@@ -9,16 +8,18 @@ function AppHeader({
   themeMode,
   onThemeModeChange,
 }) {
-  const { session } = useSession();
+  const { vaultId, leaveVault } = useVault();
 
   return (
     <header className="app-header">
       <div className="app-header-top">
         <h1>tasks</h1>
         <div className="header-controls">
-          {session && <p>{session.user.email}</p>}
-          <button className="button" onClick={() => supabase.auth.signOut()}>
-            Logout
+          {vaultId && (
+            <p className="vault-id-label">vault …{vaultId.slice(-8)}</p>
+          )}
+          <button className="button" onClick={leaveVault}>
+            leave
           </button>
           <ThemeToggle value={themeMode} onChange={onThemeModeChange} />
           <div className="view-toggles" role="group" aria-label="view mode">

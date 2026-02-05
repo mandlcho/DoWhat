@@ -1,36 +1,37 @@
-import { useSession } from "./hooks/useSession";
+import { VaultProvider, useVault } from "./hooks/useVault";
+import { isSupabaseConfigured } from "./supabaseClient";
 import Auth from "./components/Auth";
 import DoWhatApp from "./components/DoWhatApp";
 import "./App.css";
 
-function App() {
-  const { session, error, isSupabaseConfigured } = useSession();
+function AppInner() {
+  const { vaultId } = useVault();
 
   if (!isSupabaseConfigured) {
     return (
       <div className="container" style={{ padding: "50px 0 100px 0" }}>
         <h2>Supabase is not configured</h2>
         <p>
-          Provide <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code> as build
-          environment variables so authentication can run in production.
+          Provide <code>VITE_SUPABASE_URL</code> and{" "}
+          <code>VITE_SUPABASE_ANON_KEY</code> as build environment variables so
+          the app can connect to its database.
         </p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="container" style={{ padding: "50px 0 100px 0" }}>
-        <h2>Unable to connect to Supabase</h2>
-        <p>{error}</p>
       </div>
     );
   }
 
   return (
     <div className="container" style={{ padding: "50px 0 100px 0" }}>
-      {!session ? <Auth /> : <DoWhatApp key={session.user.id} session={session} />}
+      {!vaultId ? <Auth /> : <DoWhatApp key={vaultId} />}
     </div>
+  );
+}
+
+function App() {
+  return (
+    <VaultProvider>
+      <AppInner />
+    </VaultProvider>
   );
 }
 

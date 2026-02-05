@@ -11,18 +11,23 @@ import App from "./App";
 
 let lastCreatedCategoryId = null;
 
-vi.mock("./hooks/useSession", () => {
-  const mockSession = { user: { id: "test-user", email: "test@example.com" } };
-  const useSession = () => ({
-    session: mockSession,
-    error: null,
+vi.mock("./hooks/useVault", () => {
+  const { createContext, useContext } = require("react");
+  const Ctx = createContext();
+  const vaultValue = {
+    vaultId: "test-vault-token-0000000000000000",
     loading: false,
-    isSupabaseConfigured: true,
-  });
-  const SessionProvider = ({ children }) => children;
-  return { useSession, SessionProvider };
+    error: null,
+    createVault: async () => "test-vault-token-0000000000000000",
+    joinVault: async () => true,
+    leaveVault: () => {},
+  };
+  const VaultProvider = ({ children }) => (
+    <Ctx.Provider value={vaultValue}>{children}</Ctx.Provider>
+  );
+  const useVault = () => useContext(Ctx);
+  return { VaultProvider, useVault };
 });
-import { SessionProvider } from "./hooks/useSession";
 
 vi.mock("./hooks/useTodos", () => {
   const { useMemo, useState, useCallback } = require("react");
@@ -296,9 +301,7 @@ import { __resetTables } from "./supabaseClient";
 const renderApp = () =>
   render(
     <MemoryRouter>
-      <SessionProvider>
-        <App />
-      </SessionProvider>
+      <App />
     </MemoryRouter>,
   );
 

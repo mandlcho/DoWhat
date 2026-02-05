@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { supabase } from "../supabaseClient";
-import { useSession } from "./useSession";
+import { useVault } from "./useVault";
 
 export const TODO_PRIORITIES = ["high", "medium", "low"];
 export const DEFAULT_PRIORITY = "medium";
@@ -100,17 +100,16 @@ const splitTodosByArchive = (items) => {
 };
 
 export function useTodos() {
-  const { session } = useSession();
+  const { vaultId } = useVault();
   const [todos, setTodos] = useState([]);
   const [archivedTodos, setArchivedTodos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [syncStateById, setSyncStateById] = useState(new Map());
   const [syncErrorById, setSyncErrorById] = useState(new Map());
   const [supportsCategories, setSupportsCategories] = useState(false);
-  const user = session?.user;
 
   const refreshTodos = useCallback(async () => {
-    if (!user) {
+    if (!vaultId) {
       setTodos([]);
       setArchivedTodos([]);
       setLoading(false);
@@ -123,6 +122,7 @@ export function useTodos() {
     const { data, error } = await supabase
       .from("todos")
       .select("*")
+      .eq("vault_id", vaultId)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -143,7 +143,7 @@ export function useTodos() {
     setSyncErrorById(new Map());
     setLoading(false);
     return { data: mapped, error: null };
-  }, [user]);
+  }, [vaultId]);
 
   const upsertTodoInState = useCallback((nextTodo) => {
     if (!nextTodo || !nextTodo.id) return;
@@ -199,7 +199,7 @@ export function useTodos() {
   }, []);
 
   useEffect(() => {
-    if (!user) {
+    if (!vaultId) {
       setTodos([]);
       setArchivedTodos([]);
       setLoading(false);
@@ -225,6 +225,9 @@ export function useTodos() {
             return;
           }
 
+          // Only process events for our vault
+          if (payload.new?.vault_id !== vaultId) return;
+
           const nextTodo = mapTodoFromDatabase(payload.new);
           console.log("[realtime] mapped todo:", {
             id: nextTodo?.id,
@@ -243,17 +246,17 @@ export function useTodos() {
     return () => {
       supabase.removeChannel(subscription);
     };
-  }, [user, upsertTodoInState, removeTodoFromState, refreshTodos]);
+  }, [vaultId, upsertTodoInState, removeTodoFromState, refreshTodos]);
 
   const addTodo = async (todo) => {
-    if (!user)
-      return { success: false, error: new Error("User not authenticated.") };
+    if (!vaultId)
+      return { success: false, error: new Error("No active vault.") };
 
     const tempId = todo?.id ?? createId();
     const optimistic = mapTodoFromDatabase({
       id: tempId,
       ...mapTodoToDatabase(todo),
-      user_id: user.id,
+      vault_id: vaultId,
       created_at: new Date().toISOString(),
       archived_at: null,
     });
@@ -274,7 +277,7 @@ export function useTodos() {
 
     const { data, error } = await supabase
       .from("todos")
-      .insert([{ ...mapTodoToDatabase(todo), user_id: user.id }])
+      .insert([{ ...mapTodoToDatabase(todo), vault_id: vaultId }])
       .select();
 
     if (error) {
@@ -333,8 +336,11 @@ export function useTodos() {
   };
 
   const retryTodoSync = async (id) => {
-    if (!user || !id)
-      return { success: false, error: new Error("Missing todo id.") };
+    if (!vaultId || !id)
+      return {
+        success: false,
+        error: new Error("Missing todo id or no active vault."),
+      };
 
     const syncState = syncStateById.get(id);
     if (syncState !== "failed") {
@@ -362,7 +368,7 @@ export function useTodos() {
       const attemptInsert = async (allowCategories) => {
         const payload = {
           ...prepareDbPayload(todo, { includeCategories: allowCategories }),
-          user_id: user.id,
+          vault_id: vaultId,
         };
         return supabase.from("todos").insert([payload]).select();
       };
@@ -473,7 +479,7 @@ export function useTodos() {
 
   const updateTodo = useCallback(
     async (id, updates) => {
-      if (!user || !id) return null;
+      if (!vaultId || !id) return null;
 
       // Find the current todo to create optimistic update
       const currentTodo = [...todos, ...archivedTodos].find((t) => t.id === id);
@@ -600,11 +606,11 @@ export function useTodos() {
       }
       return updated;
     },
-    [user, todos, archivedTodos, upsertTodoInState, supportsCategories],
+    [vaultId, todos, archivedTodos, upsertTodoInState, supportsCategories],
   );
 
   const deleteTodo = async (id) => {
-    if (!user || !id) return;
+    if (!vaultId || !id) return;
 
     const { error } = await supabase.from("todos").delete().eq("id", id);
 

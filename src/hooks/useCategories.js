@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
-import { useSession } from "./useSession";
+import { useVault } from "./useVault";
 
 const DEFAULT_CATEGORIES = [
   { label: "work", color: "#2563eb" },
@@ -18,27 +18,25 @@ const mapCategoryFromDatabase = (row) => {
   };
 };
 
-const mapCategoryToDatabase = (category, userId) => {
-  if (!category?.label || !userId) {
+const mapCategoryToDatabase = (category, vaultId) => {
+  if (!category?.label || !vaultId) {
     return null;
   }
 
   return {
     name: category.label.trim().toLowerCase(),
     color: category.color ?? "#2563eb",
-    user_id: userId,
+    vault_id: vaultId,
   };
 };
 
 export function useCategories() {
-  const { session } = useSession();
+  const { vaultId } = useVault();
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const user = session?.user;
-
   useEffect(() => {
-    if (!user) {
+    if (!vaultId) {
       setCategories([]);
       setLoading(false);
       return undefined;
@@ -49,6 +47,7 @@ export function useCategories() {
       const { data, error } = await supabase
         .from("categories")
         .select("*")
+        .eq("vault_id", vaultId)
         .order("name", { ascending: true });
 
       if (error) {
@@ -59,7 +58,7 @@ export function useCategories() {
 
       if (!data || data.length === 0) {
         const inserts = DEFAULT_CATEGORIES.map((category) =>
-          mapCategoryToDatabase(category, user.id),
+          mapCategoryToDatabase(category, vaultId),
         ).filter(Boolean);
 
         const { data: newCategories, error: insertError } = await supabase
@@ -101,6 +100,9 @@ export function useCategories() {
             return;
           }
 
+          // Only process events for our vault
+          if (payload.new?.vault_id !== vaultId) return;
+
           const mapped = mapCategoryFromDatabase(payload.new);
           if (!mapped) {
             return;
@@ -121,10 +123,10 @@ export function useCategories() {
     return () => {
       supabase.removeChannel(subscription);
     };
-  }, [user]);
+  }, [vaultId]);
 
   const addCategory = async (label, color) => {
-    if (!user || !label) return null;
+    if (!vaultId || !label) return null;
 
     const normalized = label.trim();
     const normalizedKey = normalized.toLowerCase();
@@ -135,7 +137,7 @@ export function useCategories() {
 
     const dbCategory = mapCategoryToDatabase(
       { label: normalized, color: color || "#6b7280" },
-      user.id,
+      vaultId,
     );
 
     const { data, error } = await supabase
@@ -158,7 +160,7 @@ export function useCategories() {
   };
 
   const removeCategory = async (categoryId) => {
-    if (!user || !categoryId) return;
+    if (!vaultId || !categoryId) return;
 
     const { error } = await supabase
       .from("categories")
